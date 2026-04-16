@@ -1,6 +1,8 @@
 import dotenv from 'dotenv';
 
-dotenv.config();
+dotenv.config({
+  path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env.dev',
+});
 
 const requiredEnv = (key: string): string => {
   const value = process.env[key];

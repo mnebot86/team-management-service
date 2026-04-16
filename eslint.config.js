@@ -21,6 +21,7 @@ module.exports = [
       '@typescript-eslint/no-unused-vars': ['warn'],
       '@typescript-eslint/no-explicit-any': 'warn',
       'eol-last': ['error', 'always'],
+      'no-multiple-empty-lines': ['error', { max: 1, maxBOF: 0, maxEOF: 1 }],
     },
   },
 
