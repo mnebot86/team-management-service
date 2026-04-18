@@ -7,3 +7,14 @@ export const createTeam = async (data: CreateTeamDto) => {
   return team;
 };
 
+export const getTeamById = async (id: string) => {
+  const team = await Team.findById(id);
+
+  return team;
+};
+
+export const getTeams = async () => {
+  const teams = await Team.find({}).lean();
+
+  return teams;
+};
