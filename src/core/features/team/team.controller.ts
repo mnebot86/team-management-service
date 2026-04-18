@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { Request, Response } from 'express';
 import * as teamService from './team.service';
 import { StatusCodes } from 'http-status-codes';
@@ -56,5 +57,65 @@ export const createTeam = async (req: Request, res: Response) => {
     }
 
     return sendError(res, StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to create team', error);
+  }
+};
+
+export const getTeams = async (req: Request, res: Response) => {
+  try {
+    const teams = await teamService.getTeams();
+    return sendSuccess(res, StatusCodes.OK, teams, 'Teams fetched successfully');
+  } catch (error) {
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to fetch team',
+      error,
+    );
+  }
+}
+
+export const getTeam = async (req: Request, res: Response) => {
+  const teamId = req.params.teamId as string;
+
+  if (!teamId) {
+    return sendError(
+      res,
+      StatusCodes.BAD_REQUEST,
+      'Team Id is required in params',
+    );
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(teamId)) {
+    return sendError(
+      res,
+      StatusCodes.BAD_REQUEST,
+      'Invalid Team Id',
+    );
+  }
+
+  try {
+    const team = await teamService.getTeamById(teamId);
+
+    if (!team) {
+      return sendError(
+        res,
+        StatusCodes.NOT_FOUND,
+        'Team not found',
+      );
+    }
+
+    return sendSuccess(
+      res,
+      StatusCodes.OK,
+      team,
+      'Team fetched successfully',
+    );
+  } catch (error) {
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to fetch team',
+      error,
+    );
   }
 };
