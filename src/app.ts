@@ -3,6 +3,7 @@ import cors from 'cors';
 import { logger } from './core/shared/utils/logger';
 
 // routes
+import authRoutes from './core/features/auth/auth.routers';
 import teamRoutes from './core/features/team/team.routes'
 
 // middleware
@@ -21,6 +22,7 @@ app.get('/health', (_req, res) => {
 });
 
 // feature routes
+app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/teams', teamRoutes);
 
 // error handler (must be last)
