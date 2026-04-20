@@ -8,7 +8,7 @@ import { User } from '../../user/user.model';
 describe('Auth API - Register', () => {
   const testUser = {
     email: 'testuser@example.com',
-    password: 'password123',
+    password: 'Password1!',
   };
 
   beforeAll(async () => {
@@ -49,7 +49,7 @@ describe('Auth API - Register', () => {
   it('should return error for invalid email format', async () => {
     const response = await request(app)
       .post('/api/v1/auth/register')
-      .send({ email: 'invalid-email', password: 'password123' });
+      .send({ email: 'invalid-email', password: 'Password1!' });
 
     expect(response.status).toBe(StatusCodes.BAD_REQUEST);
     expect(response.body.success).toBe(false);
@@ -68,7 +68,7 @@ describe('Auth API - Register', () => {
 describe('Auth API - Login', () => {
   const testUser = {
     email: 'testuser@example.com',
-    password: 'password123',
+    password: 'Password1!',
   };
 
   beforeAll(async () => {
@@ -111,7 +111,7 @@ describe('Auth API - Login', () => {
   it('should return error when email is missing on login', async () => {
     const response = await request(app)
       .post('/api/v1/auth/login')
-      .send({ password: 'password123' });
+      .send({ password: 'Password1!' });
 
     expect(response.status).toBe(StatusCodes.BAD_REQUEST);
     expect(response.body.success).toBe(false);
