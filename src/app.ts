@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { logger } from './core/shared/utils/logger';
 
 // routes
@@ -8,11 +9,13 @@ import teamRoutes from './core/features/team/team.routes'
 
 // middleware
 import { errorMiddleware } from './core/middleware/error.middleware';
+import { protect } from './core/middleware/auth.middleware';
 
 const app = express();
 
 // global middleware
-app.use(cors());
+app.use(helmet())
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
 // health check route
@@ -23,7 +26,7 @@ app.get('/health', (_req, res) => {
 
 // feature routes
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/teams', teamRoutes);
+app.use('/api/v1/teams', protect, teamRoutes);
 
 // error handler (must be last)
 app.use(errorMiddleware);

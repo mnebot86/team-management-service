@@ -1,5 +1,3 @@
-
-
 export type PasswordValidationResult = {
   valid: boolean;
   message?: string;
