@@ -1,12 +1,14 @@
 import mongoose from 'mongoose';
-import { Request, Response } from 'express';
+import { Response } from 'express';
+
 import * as teamService from './team.service';
 import { StatusCodes } from 'http-status-codes';
 import { sendSuccess, sendError } from '../../shared/utils/response';
 import { CreateTeamDto } from './team.dto';
 import { MONGO_ERRORS } from '../../constants/mongoErrors';
+import { AuthRequest } from './team.types';
 
-export const createTeam = async (req: Request, res: Response) => {
+export const createTeam = async (req: AuthRequest, res: Response) => {
   const payload: CreateTeamDto = req.body;
 
   const { name, ageGroup, sport } = payload;
@@ -35,10 +37,15 @@ export const createTeam = async (req: Request, res: Response) => {
     );
   }
 
+  if (!req.user?.id) {
+    return sendError(res, StatusCodes.UNAUTHORIZED, 'Unauthorized');
+  }
+
   const sanitizedPayload: CreateTeamDto = {
     name: name.trim(),
     ageGroup: ageGroup.trim(),
-    sport: sport.trim()
+    sport: sport.trim(),
+    ownerId: new mongoose.Types.ObjectId(req.user.id),
   };
 
   try {
@@ -60,9 +67,14 @@ export const createTeam = async (req: Request, res: Response) => {
   }
 };
 
-export const getTeams = async (req: Request, res: Response) => {
+export const getTeams = async (req: AuthRequest, res: Response) => {
+  if (!req.user?.id) {
+    return sendError(res, StatusCodes.UNAUTHORIZED, 'Unauthorized');
+  }
+
   try {
-    const teams = await teamService.getTeams();
+    const teams = await teamService.getTeams(req.user.id);
+
     return sendSuccess(res, StatusCodes.OK, teams, 'Teams fetched successfully');
   } catch (error) {
     return sendError(
@@ -74,7 +86,11 @@ export const getTeams = async (req: Request, res: Response) => {
   }
 }
 
-export const getTeam = async (req: Request, res: Response) => {
+export const getTeam = async (req: AuthRequest, res: Response) => {
+  if (!req.user?.id) {
+    return sendError(res, StatusCodes.UNAUTHORIZED, 'Unauthorized');
+  }
+
   const teamId = req.params.teamId as string;
 
   if (!teamId) {
@@ -94,7 +110,10 @@ export const getTeam = async (req: Request, res: Response) => {
   }
 
   try {
-    const team = await teamService.getTeamById(teamId);
+    const team = await teamService.getTeamByIdAndOwner(
+      teamId,
+      req.user.id,
+    );
 
     if (!team) {
       return sendError(

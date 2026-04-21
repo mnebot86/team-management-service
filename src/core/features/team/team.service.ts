@@ -13,8 +13,20 @@ export const getTeamById = async (id: string) => {
   return team;
 };
 
-export const getTeams = async () => {
-  const teams = await Team.find({}).lean();
+export const getTeamByIdAndOwner = async (
+  teamId: string,
+  ownerId: string,
+) => {
+  const team = await Team.findOne({
+    _id: teamId,
+    ownerId,
+  });
+
+  return team;
+};
+
+export const getTeams = async (ownerId: string) => {
+  const teams = await Team.find({ ownerId }).lean();
 
   return teams;
 };

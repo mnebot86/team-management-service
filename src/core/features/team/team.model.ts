@@ -17,6 +17,11 @@ const teamSchema = new Schema<ITeam>(
       default: 'football',
       trim: true,
     },
+    ownerId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    }
   },
   {
     timestamps: true,
