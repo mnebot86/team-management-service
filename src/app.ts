@@ -6,6 +6,7 @@ import { logger } from './core/shared/utils/logger';
 // routes
 import authRoutes from './core/features/auth/auth.routers';
 import teamRoutes from './core/features/team/team.routes'
+import inviteRoutes from './core/features/invites/invite.routes';
 
 // middleware
 import { errorMiddleware } from './core/middleware/error.middleware';
@@ -27,6 +28,7 @@ app.get('/health', (_req, res) => {
 // feature routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/teams', protect, teamRoutes);
+app.use('/api/v1/invites', protect, inviteRoutes);
 
 // error handler (must be last)
 app.use(errorMiddleware);

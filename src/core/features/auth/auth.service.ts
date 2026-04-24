@@ -11,9 +11,9 @@ type AuthInput = {
 
 const SALT_ROUNDS = 10;
 
-export const generateToken = (userId: string) => {
+export const generateToken = (userId: string, email: string) => {
   return jwt.sign(
-    { userId },
+    { userId, email },
     env.JWT_SECRET!,
     { expiresIn: '1d' }
   );
@@ -27,7 +27,7 @@ export const register = async ({ email, password }: RegisterInput) => {
     password: hashedPassword,
   });
 
-  const token = generateToken(user._id.toString());
+  const token = generateToken(user._id.toString(), user.email);
 
   return {
     user: {
@@ -51,7 +51,7 @@ export const login = async ({ email, password }: AuthInput) => {
     throw new Error('INVALID_CREDENTIALS');
   }
 
-  const token = generateToken(user._id.toString());
+  const token = generateToken(user._id.toString(), user.email);
 
   return {
     user: {

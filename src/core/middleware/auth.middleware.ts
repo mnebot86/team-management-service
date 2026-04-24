@@ -1,16 +1,18 @@
+import { env } from "../../config/env";
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { StatusCodes } from 'http-status-codes';
 import { sendError } from '../shared/utils/response';
-import { env } from '../../config/env';
 
 type JwtPayload = {
   userId: string;
+  email: string;
 };
 
 interface AuthRequest extends Request {
   user?: {
     id: string;
+    email: string;
   };
 }
 
@@ -55,6 +57,7 @@ export const protect = (
 
     (req as AuthRequest).user = {
       id: decoded.userId,
+      email: decoded.email,
     };
 
     next();

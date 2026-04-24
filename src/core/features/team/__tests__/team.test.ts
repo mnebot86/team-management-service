@@ -190,6 +190,178 @@ describe('Team API - Get Teams (List)', () => {
   });
 });
 
+describe('Team API - Update & Delete Team', () => {
+  const testTeam = {
+    name: 'Update Jets',
+    ageGroup: '13U',
+    sport: 'football',
+  };
+
+  let token: string;
+  let teamId: string;
+
+  beforeEach(async () => {
+    const authRes = await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        email: `test-update-${Date.now()}@example.com`,
+        password: 'Password1!'
+      });
+
+    token = authRes.body.data.token;
+
+    const createRes = await request(app)
+      .post('/api/v1/teams')
+      .set('Authorization', `Bearer ${token}`)
+      .send(testTeam);
+
+    teamId = createRes.body.data._id;
+  });
+
+  afterEach(async () => {
+    await Team.deleteMany({ name: { $regex: 'Jets' } });
+    await User.deleteMany({});
+  });
+
+  it('should update a team successfully', async () => {
+    const response = await request(app)
+      .put(`/api/v1/teams/${teamId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Updated Jets' });
+
+    expect(response.status).toBe(StatusCodes.OK);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data.name).toBe('Updated Jets');
+  });
+
+  it('should forbid update for player role', async () => {
+    // create second user
+    const userRes = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ email: 'player@example.com', password: 'Password1!' });
+
+    const playerToken = userRes.body.data.token;
+    const playerId = userRes.body.data.user._id;
+
+    // add player to team
+    await request(app)
+      .post(`/api/v1/teams/${teamId}/members`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ userId: playerId, role: 'player' });
+
+    const response = await request(app)
+      .put(`/api/v1/teams/${teamId}`)
+      .set('Authorization', `Bearer ${playerToken}`)
+      .send({ name: 'Hacked Name' });
+
+    expect(response.status).toBe(StatusCodes.FORBIDDEN);
+  });
+
+  it('should return 404 when updating non-owned or non-existing team', async () => {
+    const fakeId = new mongoose.Types.ObjectId();
+
+    const response = await request(app)
+      .put(`/api/v1/teams/${fakeId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Nope' });
+
+    expect(response.status).toBe(StatusCodes.NOT_FOUND);
+  });
+
+  it('should delete a team successfully', async () => {
+    const response = await request(app)
+      .delete(`/api/v1/teams/${teamId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(StatusCodes.OK);
+    expect(response.body.success).toBe(true);
+  });
+
+  it('should forbid delete for coach role', async () => {
+    // create coach user
+    const userRes = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ email: 'coach@example.com', password: 'Password1!' });
+
+    const coachToken = userRes.body.data.token;
+    const coachId = userRes.body.data.user._id;
+
+    // add coach to team
+    await request(app)
+      .post(`/api/v1/teams/${teamId}/members`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ userId: coachId, role: 'coach' });
+
+    const response = await request(app)
+      .delete(`/api/v1/teams/${teamId}`)
+      .set('Authorization', `Bearer ${coachToken}`);
+
+    expect(response.status).toBe(StatusCodes.FORBIDDEN);
+  });
+
+  it('should return 404 when deleting a non-existing team', async () => {
+    const fakeId = new mongoose.Types.ObjectId();
+
+    const response = await request(app)
+      .delete(`/api/v1/teams/${fakeId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(StatusCodes.NOT_FOUND);
+  });
+});
+
+describe('Team API - Members', () => {
+  let token: string;
+  let teamId: string;
+  let memberId: string;
+
+  beforeAll(async () => {
+    const authRes = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ email: 'members@example.com', password: 'Password1!' });
+
+    token = authRes.body.data.token;
+
+    const createRes = await request(app)
+      .post('/api/v1/teams')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Members Team', ageGroup: '14U', sport: 'football' });
+
+    teamId = createRes.body.data._id;
+
+    const userRes = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ email: 'member@example.com', password: 'Password1!' });
+
+    memberId = userRes.body.data.user._id;
+  });
+
+  afterAll(async () => {
+    await Team.deleteMany({ name: 'Members Team' });
+    await User.deleteMany({});
+  });
+
+  it('should add a member to team', async () => {
+    const response = await request(app)
+      .post(`/api/v1/teams/${teamId}/members`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ userId: memberId, role: 'player' });
+
+    expect(response.status).toBe(StatusCodes.OK);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data.members.length).toBeGreaterThan(0);
+  });
+
+  it('should remove a member from team', async () => {
+    const response = await request(app)
+      .delete(`/api/v1/teams/${teamId}/members/${memberId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(StatusCodes.OK);
+    expect(response.body.success).toBe(true);
+  });
+});
+
 afterAll(async () => {
   await mongoose.disconnect();
 });
