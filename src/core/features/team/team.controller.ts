@@ -147,14 +147,6 @@ export const updateTeam = async (req: AuthRequest, res: Response) => {
 
   const teamId = req.params.teamId as string;
 
-  if (!teamId) {
-    return sendError(res, StatusCodes.BAD_REQUEST, 'Team Id is required in params');
-  }
-
-  if (!mongoose.Types.ObjectId.isValid(teamId)) {
-    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid Team Id');
-  }
-
   const { name, ageGroup, sport } = req.body as Partial<CreateTeamDto>;
 
   if (!name && !ageGroup && !sport) {
@@ -168,18 +160,6 @@ export const updateTeam = async (req: AuthRequest, res: Response) => {
   };
 
   try {
-    const team = await teamService.getTeamByIdForUser(teamId, req.user.id);
-
-    if (!team) {
-      return sendError(res, StatusCodes.NOT_FOUND, 'Team not found');
-    }
-
-    const role = getUserRoleInTeam(team, req.user.id);
-
-    if (!canUpdateTeam(role)) {
-      return sendError(res, StatusCodes.FORBIDDEN, 'Forbidden');
-    }
-
     const updated = await teamService.updateTeam(teamId, updatePayload);
 
     return sendSuccess(res, StatusCodes.OK, updated, 'Team updated successfully');
@@ -205,27 +185,7 @@ export const deleteTeam = async (req: AuthRequest, res: Response) => {
 
   const teamId = req.params.teamId as string;
 
-  if (!teamId) {
-    return sendError(res, StatusCodes.BAD_REQUEST, 'Team Id is required in params');
-  }
-
-  if (!mongoose.Types.ObjectId.isValid(teamId)) {
-    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid Team Id');
-  }
-
   try {
-    const team = await teamService.getTeamByIdForUser(teamId, req.user.id);
-
-    if (!team) {
-      return sendError(res, StatusCodes.NOT_FOUND, 'Team not found');
-    }
-
-    const role = getUserRoleInTeam(team, req.user.id);
-
-    if (!canDeleteTeam(role)) {
-      return sendError(res, StatusCodes.FORBIDDEN, 'Forbidden');
-    }
-
     await teamService.deleteTeam(teamId);
 
     return sendSuccess(res, StatusCodes.OK, null, 'Team deleted successfully');
@@ -259,18 +219,6 @@ export const addTeamMember = async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const team = await teamService.getTeamByIdForUser(teamId, req.user.id);
-
-    if (!team) {
-      return sendError(res, StatusCodes.NOT_FOUND, 'Team not found');
-    }
-
-    const roleCheck = getUserRoleInTeam(team, req.user.id);
-
-    if (!canManageMembers(roleCheck)) {
-      return sendError(res, StatusCodes.FORBIDDEN, 'Forbidden');
-    }
-
     const updated = await teamService.addMemberToTeam(teamId, userId, role || 'player');
 
     return sendSuccess(res, StatusCodes.OK, updated, 'Member added successfully');
@@ -304,18 +252,6 @@ export const removeTeamMember = async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const team = await teamService.getTeamByIdForUser(teamId, req.user.id);
-
-    if (!team) {
-      return sendError(res, StatusCodes.NOT_FOUND, 'Team not found');
-    }
-
-    const roleCheck = getUserRoleInTeam(team, req.user.id);
-
-    if (!canManageMembers(roleCheck)) {
-      return sendError(res, StatusCodes.FORBIDDEN, 'Forbidden');
-    }
-
     const updated = await teamService.removeMemberFromTeam(teamId, memberId);
 
     return sendSuccess(res, StatusCodes.OK, updated, 'Member removed successfully');
