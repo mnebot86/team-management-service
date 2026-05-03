@@ -7,7 +7,6 @@ import { sendSuccess, sendError } from '../../shared/utils/response';
 import { CreateTeamDto } from './team.dto';
 import { MONGO_ERRORS } from '../../constants/mongoErrors';
 import { AuthRequest } from './team.types';
-import { getUserRoleInTeam, canUpdateTeam, canDeleteTeam, canManageMembers } from './team.permissions';
 
 export const createTeam = async (req: AuthRequest, res: Response) => {
   const payload: CreateTeamDto = req.body;
@@ -159,6 +158,8 @@ export const updateTeam = async (req: AuthRequest, res: Response) => {
     ...(sport ? { sport: sport.trim() } : {}),
   };
 
+  // TODO: Add permission check using TeamMember (owner/coach)
+
   try {
     const updated = await teamService.updateTeam(teamId, updatePayload);
 
@@ -185,77 +186,13 @@ export const deleteTeam = async (req: AuthRequest, res: Response) => {
 
   const teamId = req.params.teamId as string;
 
+  // TODO: Add permission check using TeamMember (owner only)
+
   try {
     await teamService.deleteTeam(teamId);
 
     return sendSuccess(res, StatusCodes.OK, null, 'Team deleted successfully');
   } catch (error) {
     return sendError(res, StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to delete team', error);
-  }
-};
-
-export const addTeamMember = async (req: AuthRequest, res: Response) => {
-  if (!req.user?.id) {
-    return sendError(res, StatusCodes.UNAUTHORIZED, 'Unauthorized');
-  }
-
-  const teamId = req.params.teamId as string;
-  const { userId, role } = req.body as { userId?: string; role?: string };
-
-  if (!teamId) {
-    return sendError(res, StatusCodes.BAD_REQUEST, 'Team Id is required in params');
-  }
-
-  if (!mongoose.Types.ObjectId.isValid(teamId)) {
-    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid Team Id');
-  }
-
-  if (!userId) {
-    return sendError(res, StatusCodes.BAD_REQUEST, 'User Id is required');
-  }
-
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid User Id');
-  }
-
-  try {
-    const updated = await teamService.addMemberToTeam(teamId, userId, role || 'player');
-
-    return sendSuccess(res, StatusCodes.OK, updated, 'Member added successfully');
-  } catch (error) {
-    return sendError(res, StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to add member', error);
-  }
-};
-
-export const removeTeamMember = async (req: AuthRequest, res: Response) => {
-  if (!req.user?.id) {
-    return sendError(res, StatusCodes.UNAUTHORIZED, 'Unauthorized');
-  }
-
-  const teamId = req.params.teamId as string;
-  const memberId = req.params.userId as string;
-
-  if (!teamId) {
-    return sendError(res, StatusCodes.BAD_REQUEST, 'Team Id is required in params');
-  }
-
-  if (!mongoose.Types.ObjectId.isValid(teamId)) {
-    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid Team Id');
-  }
-
-  if (!memberId) {
-    return sendError(res, StatusCodes.BAD_REQUEST, 'User Id is required in params');
-  }
-
-  if (!mongoose.Types.ObjectId.isValid(memberId)) {
-    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid User Id');
-  }
-
-  try {
-    const updated = await teamService.removeMemberFromTeam(teamId, memberId);
-
-    return sendSuccess(res, StatusCodes.OK, updated, 'Member removed successfully');
-  } catch (error) {
-    return sendError(res, StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to remove member', error);
   }
 };

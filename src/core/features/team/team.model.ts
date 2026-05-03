@@ -22,20 +22,6 @@ const teamSchema = new Schema<ITeam>(
       ref: 'User',
       required: true,
     },
-    members: [
-      {
-        userId: {
-          type: Schema.Types.ObjectId,
-          ref: 'User',
-          required: true,
-        },
-        role: {
-          type: String,
-          enum: ['owner', 'coach', 'player'],
-          default: 'player',
-        },
-      },
-    ],
   },
   {
     timestamps: true,

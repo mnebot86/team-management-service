@@ -1,7 +1,9 @@
 import mongoose from 'mongoose';
-import { Team } from '../team/team.model';
 import { Invite } from './invite.model';
 import { MONGO_ERRORS } from '../../constants/mongoErrors';
+import { Profile } from '../profile/profile.model';
+import { addTeamMember } from '../teamMember/teamMember.service';
+import type { TeamRole } from '../teamMember/teamMember.modal';
 
 export const createInvite = async ({
   teamId,
@@ -11,7 +13,7 @@ export const createInvite = async ({
 }: {
   teamId: string;
   email: string;
-  role: string;
+  role: TeamRole;
   invitedBy: string;
 }) => {
   try {
@@ -57,14 +59,22 @@ export const acceptInvite = async (inviteId: string, userId: string) => {
     return null;
   }
 
-  await Team.findByIdAndUpdate(invite.teamId, {
-    $addToSet: {
-      members: {
-        userId: new mongoose.Types.ObjectId(userId),
-        role: invite.role,
-      },
-    },
+  // find claimed profile for this user
+  const profile = await Profile.findOne({
+    createdByUserId: new mongoose.Types.ObjectId(userId),
+    isClaimed: true,
   });
+
+  if (!profile) {
+    return null;
+  }
+
+  // create membership via TeamMember service
+  await addTeamMember(
+    invite.teamId as mongoose.Types.ObjectId,
+    profile._id as mongoose.Types.ObjectId,
+    invite.role as TeamRole
+  );
 
   invite.status = 'accepted';
   await invite.save();

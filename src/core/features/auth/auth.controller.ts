@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import * as authService from './auth.service';
+import * as userProfileService from '../userProfile/userProfile.service';
 import { sendError, sendSuccess } from '../../shared/utils/response';
 import { MONGO_ERRORS } from '../../constants/mongoErrors';
 import { REGEX } from '../../constants/regex';
@@ -8,6 +9,8 @@ import { validateWithRegex } from '../../shared/utils/regexValidator';
 import { logger } from '../../shared/utils/logger';
 import { MongoServerError } from 'mongodb';
 import { validatePassword } from '../../shared/utils/passwordValidator';
+import { AuthRequest } from '../team/team.types';
+import mongoose from 'mongoose';
 
 export const register = async (req: Request, res: Response) => {
   const { email, password } = req.body;
@@ -102,6 +105,35 @@ export const login = async (req: Request, res: Response) => {
       StatusCodes.INTERNAL_SERVER_ERROR,
       'Failed to login user',
       error,
+    );
+  }
+};
+
+export const getMe = async (req: AuthRequest, res: Response) => {
+  if (!req.user?.id) {
+    return sendError(res, StatusCodes.UNAUTHORIZED, 'Unauthorized');
+  }
+
+  try {
+    const userProfile = await userProfileService.getUserProfile(
+      new mongoose.Types.ObjectId(req.user.id)
+    );
+
+    if (!userProfile) {
+      return sendError(res, StatusCodes.NOT_FOUND, 'User profile not found');
+    }
+
+    const results = {
+      user: userProfile.userId,
+      profile: userProfile.profileId,
+    }
+    return sendSuccess(res, StatusCodes.OK, results, 'Session restored');
+  } catch (error) {
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to fetch user',
+      error
     );
   }
 };

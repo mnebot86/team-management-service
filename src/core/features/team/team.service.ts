@@ -1,6 +1,8 @@
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import { CreateTeamDto } from './team.dto';
 import { Team } from './team.model';
+import { Profile } from '../profile/profile.model';
+import { addTeamMember, getTeamsForProfile } from '../teamMember/teamMember.service';
 
 export const createTeam = async (data: CreateTeamDto) => {
   const team = await Team.create({
@@ -8,35 +10,37 @@ export const createTeam = async (data: CreateTeamDto) => {
     ownerId: new mongoose.Types.ObjectId(data.ownerId),
   });
 
+  // find profile for owner
+  const profile = await Profile.findOne({ createdByUserId: team.ownerId, isClaimed: true });
+
+  if (profile) {
+    await addTeamMember(team._id as Types.ObjectId, profile._id as Types.ObjectId, 'owner');
+  }
+
   return team;
 };
 
-export const getTeamByIdForUser = async (
-  teamId: string,
-  userId: string
-) => {
-  const objectUserId = new mongoose.Types.ObjectId(userId);
+export const getTeamByIdForUser = async (teamId: string, userId: string) => {
+  const profile = await Profile.findOne({ createdByUserId: userId, isClaimed: true });
+  if (!profile) return null;
 
-  return await Team.findOne({
-    _id: teamId,
-    $or: [
-      { ownerId: objectUserId },
-      { 'members.userId': objectUserId },
-    ],
+  const memberships = await getTeamsForProfile(profile._id as Types.ObjectId);
+  const match = memberships.find((m) => {
+    const t = m.teamId as { _id?: Types.ObjectId } | Types.ObjectId;
+    const id = t instanceof Types.ObjectId ? t : t._id;
+    return id?.toString() === teamId;
   });
+
+  return match ? match.teamId : null;
 };
 
 export const getTeamsForUser = async (userId: string) => {
-  const objectUserId = new mongoose.Types.ObjectId(userId);
+  const profile = await Profile.findOne({ createdByUserId: userId, isClaimed: true });
+  if (!profile) return [];
 
-  const teams = await Team.find({
-    $or: [
-      { ownerId: objectUserId },
-      { 'members.userId': objectUserId },
-    ],
-  }).lean();
+  const memberships = await getTeamsForProfile(profile._id as Types.ObjectId);
 
-  return teams;
+  return memberships.map((m) => m.teamId);
 };
 
 export const updateTeam = async (
@@ -48,42 +52,4 @@ export const updateTeam = async (
 
 export const deleteTeam = async (teamId: string) => {
   return await Team.findByIdAndDelete(teamId);
-};
-
-export const addMemberToTeam = async (
-  teamId: string,
-  userId: string,
-  role: string
-) => {
-  const updated = await Team.findByIdAndUpdate(
-    teamId,
-    {
-      $addToSet: {
-        members: {
-          userId: new mongoose.Types.ObjectId(userId),
-          role,
-        },
-      },
-    },
-    { new: true }
-  );
-
-  return updated;
-};
-
-export const removeMemberFromTeam = async (
-  teamId: string,
-  userId: string
-) => {
-  const updated = await Team.findByIdAndUpdate(
-    teamId,
-    {
-      $pull: {
-        members: { userId: new mongoose.Types.ObjectId(userId) },
-      },
-    },
-    { new: true }
-  );
-
-  return updated;
 };

@@ -8,3 +8,4 @@ coverage
 
 # mac
 .DS_Store
+.yarn

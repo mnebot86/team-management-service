@@ -3,8 +3,9 @@ import mongoose from 'mongoose';
 import { StatusCodes } from 'http-status-codes';
 import { sendError, sendSuccess } from '../../shared/utils/response';
 import * as inviteService from './invite.service';
-import * as teamService from '../team/team.service';
-import { getUserRoleInTeam, canManageMembers } from '../team/team.permissions';
+import { Profile } from '../profile/profile.model';
+import { getTeamRole } from '../teamMember/teamMember.service';
+import type { TeamRole } from '../teamMember/teamMember.modal';
 import { AuthRequest } from '../team/team.types';
 
 export const createInvite = async (req: AuthRequest, res: Response) => {
@@ -24,22 +25,29 @@ export const createInvite = async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const team = await teamService.getTeamByIdForUser(teamId, req.user.id);
+    // resolve user's profile
+    const profile = await Profile.findOne({
+      createdByUserId: new mongoose.Types.ObjectId(req.user.id),
+      isClaimed: true,
+    });
 
-    if (!team) {
-      return sendError(res, StatusCodes.NOT_FOUND, 'Team not found');
+    if (!profile) {
+      return sendError(res, StatusCodes.FORBIDDEN, 'No profile found for user');
     }
 
-    const roleCheck = getUserRoleInTeam(team, req.user.id);
+    const roleInTeam = await getTeamRole(
+      new mongoose.Types.ObjectId(teamId),
+      profile._id as mongoose.Types.ObjectId
+    );
 
-    if (!roleCheck || !canManageMembers(roleCheck)) {
+    if (!roleInTeam || (roleInTeam !== 'owner' && roleInTeam !== 'coach')) {
       return sendError(res, StatusCodes.FORBIDDEN, 'Forbidden');
     }
 
     const invite = await inviteService.createInvite({
       teamId,
       email,
-      role: role || 'player',
+      role: (role as TeamRole) || 'player',
       invitedBy: req.user.id,
     });
 
