@@ -34,9 +34,9 @@ export const getTeamRole = async (
   return member ? member.role : null;
 };
 
-export const getTeamsForProfile = async (
+export const getTeamsForUser = async (
   profileId: Types.ObjectId
-): Promise<TeamMemberDocument[]> => {
+): Promise<any[]> => {
   return TeamMember.find({ profileId }).populate('teamId');
 };
 

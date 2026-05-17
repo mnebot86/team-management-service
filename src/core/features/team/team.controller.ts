@@ -1,7 +1,9 @@
 import mongoose from 'mongoose';
 import { Response } from 'express';
 
+import * as profileService from '../profile/profile.service';
 import * as teamService from './team.service';
+import * as teamMemberService from '../teamMember/teamMember.service'
 import { StatusCodes } from 'http-status-codes';
 import { sendSuccess, sendError } from '../../shared/utils/response';
 import { CreateTeamDto } from './team.dto';
@@ -50,7 +52,6 @@ export const createTeam = async (req: AuthRequest, res: Response) => {
 
   try {
     const team = await teamService.createTeam(sanitizedPayload);
-
     return sendSuccess(res, StatusCodes.CREATED, team, 'Team created successfully');
   } catch (error) {
     const err = error as { code?: number };
@@ -73,18 +74,29 @@ export const getTeams = async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const teams = await teamService.getTeamsForUser(req.user.id);
+    const teams = await teamMemberService.getTeamsForUser(new mongoose.Types.ObjectId(req.user.profileId));
 
-    return sendSuccess(res, StatusCodes.OK, teams, 'Teams fetched successfully');
+    const modifiedTeams = teams.map((teamMember) => {
+      const teamMemberObject = teamMember.toObject();
+
+      const { teamId, ...rest } = teamMemberObject;
+
+      return {
+        ...rest,
+        team: teamId,
+      };
+    });
+
+    return sendSuccess(res, StatusCodes.OK, modifiedTeams, 'Teams fetched successfully');
   } catch (error) {
     return sendError(
       res,
       StatusCodes.INTERNAL_SERVER_ERROR,
-      'Failed to fetch team',
+      'Failed to fetch teams',
       error,
     );
   }
-}
+};
 
 export const getTeam = async (req: AuthRequest, res: Response) => {
   if (!req.user?.id) {

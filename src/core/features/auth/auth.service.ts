@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import { User } from '../user/user.model';
+import { UserProfile } from '../userProfile/userProfile.model';
 import { RegisterInput } from './auth.types';
 import jwt from 'jsonwebtoken';
 import { env } from '../../..//config/env';
@@ -11,9 +12,9 @@ type AuthInput = {
 
 const SALT_ROUNDS = 10;
 
-export const generateToken = (userId: string, email: string) => {
+export const generateToken = (userId: string, email: string, profileId?: string) => {
   return jwt.sign(
-    { userId, email },
+    { userId, email, profileId },
     env.JWT_SECRET!,
     { expiresIn: '1d' }
   );
@@ -45,13 +46,21 @@ export const login = async ({ email, password }: AuthInput) => {
     throw new Error('INVALID_CREDENTIALS');
   }
 
+  const userProfile = await UserProfile.findOne({ userId: user._id });
+
   const isPasswordValid = await bcrypt.compare(password, user.password);
 
   if (!isPasswordValid) {
     throw new Error('INVALID_CREDENTIALS');
   }
 
-  const token = generateToken(user._id.toString(), user.email);
+  let token
+
+  if (userProfile) {
+    token = generateToken(user._id.toString(), user.email, userProfile.profileId.toString());
+  } else {
+    token = generateToken(user._id.toString(), user.email);
+  }
 
   return {
     user: {

@@ -7,12 +7,14 @@ import { sendError } from '../shared/utils/response';
 type JwtPayload = {
   userId: string;
   email: string;
+  profileId?: string
 };
 
 interface AuthRequest extends Request {
   user?: {
     id: string;
     email: string;
+    profileId?: string
   };
 }
 
@@ -58,6 +60,7 @@ export const protect = (
     (req as AuthRequest).user = {
       id: decoded.userId,
       email: decoded.email,
+      ...(decoded.profileId ? { profileId: decoded.profileId } : {}),
     };
 
     next();
