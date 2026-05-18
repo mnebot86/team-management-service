@@ -99,10 +99,6 @@ export const getTeams = async (req: AuthRequest, res: Response) => {
 };
 
 export const getTeam = async (req: AuthRequest, res: Response) => {
-  if (!req.user?.id) {
-    return sendError(res, StatusCodes.UNAUTHORIZED, 'Unauthorized');
-  }
-
   const teamId = req.params.teamId as string;
 
   if (!teamId) {
@@ -122,10 +118,7 @@ export const getTeam = async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const team = await teamService.getTeamByIdForUser(
-      teamId,
-      req.user.id,
-    );
+    const team = await teamService.getTeamById(teamId);
 
     if (!team) {
       return sendError(

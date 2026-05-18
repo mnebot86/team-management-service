@@ -20,18 +20,8 @@ export const createTeam = async (data: CreateTeamDto) => {
   return team;
 };
 
-export const getTeamByIdForUser = async (teamId: string, userId: string) => {
-  const profile = await Profile.findOne({ createdByUserId: userId, isClaimed: true });
-  if (!profile) return null;
-
-  const memberships = await getTeamsForProfile(profile._id as Types.ObjectId);
-  const match = memberships.find((m) => {
-    const t = m.teamId as { _id?: Types.ObjectId } | Types.ObjectId;
-    const id = t instanceof Types.ObjectId ? t : t._id;
-    return id?.toString() === teamId;
-  });
-
-  return match ? match.teamId : null;
+export const getTeamById = async (teamId: string) => {
+  return Team.findById(teamId);
 };
 
 export const getTeamsForUser = async (userId: string) => {

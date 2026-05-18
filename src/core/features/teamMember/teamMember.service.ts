@@ -58,3 +58,7 @@ export const updateTeamMemberRole = async (
     { new: true }
   );
 };
+
+export const getTeamsForProfile = async (profileId: Types.ObjectId) => {
+  return TeamMember.find({ profileId })
+};
