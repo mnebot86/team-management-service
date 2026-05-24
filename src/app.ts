@@ -7,6 +7,7 @@ import { logger } from './core/shared/utils/logger';
 // routes
 import authRoutes from './core/features/auth/auth.routers';
 import teamRoutes from './core/features/team/team.routes'
+import teamMember from './core/features/teamMember/teamMember.routers';
 import inviteRoutes from './core/features/invites/invite.routes';
 import profileRoutes from './core/features/profile/profile.routers';
 
@@ -40,6 +41,7 @@ app.get('/health', (_req, res) => {
 // feature routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/teams', protect, teamRoutes);
+app.use('/api/v1/team-members', protect, teamMember);
 app.use('/api/v1/invites', protect, inviteRoutes);
 app.use('/api/v1/profiles', protect, profileRoutes);
 

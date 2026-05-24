@@ -1,16 +1,28 @@
-import { Types } from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import { TeamMember, TeamMemberDocument, TeamRole } from './teamMember.modal';
 
 export const addTeamMember = async (
   teamId: Types.ObjectId,
   profileId: Types.ObjectId,
-  role: TeamRole
+  role: TeamRole,
+  session?: mongoose.ClientSession
 ): Promise<TeamMemberDocument> => {
-  return TeamMember.create({
-    teamId,
-    profileId,
-    role,
-  });
+  const [teamMember] = await TeamMember.create(
+    [
+      {
+        teamId,
+        profileId,
+        role,
+      },
+    ],
+    { session }
+  );
+
+  if (!teamMember) {
+    throw new Error('Team member creation failed');
+  }
+
+  return teamMember;
 };
 
 export const getTeamMembers = async (

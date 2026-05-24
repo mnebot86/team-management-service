@@ -1,4 +1,4 @@
-import { Types } from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import { Profile, ProfileDocument } from './profile.model';
 
 // Safer link code generator with retry to avoid collisions
@@ -23,14 +23,26 @@ export type CreateProfileInput = {
 };
 
 export const createProfile = async (
-  input: CreateProfileInput
+  input: CreateProfileInput,
+  session?: mongoose.ClientSession
 ): Promise<ProfileDocument> => {
   const linkCode = await generateLinkCode();
 
-  return Profile.create({
-    ...input,
-    linkCode,
-  });
+  const [profile] = await Profile.create(
+    [
+      {
+        ...input,
+        linkCode,
+      },
+    ],
+    { session }
+  );
+
+  if (!profile) {
+    throw new Error('Profile creation failed');
+  }
+
+  return profile;
 };
 
 export const createProfileForUser = async (
