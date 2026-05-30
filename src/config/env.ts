@@ -30,4 +30,9 @@ export const env = {
   MONGO_URI: requiredEnv('MONGO_URI'),
 
   JWT_SECRET: requiredEnv('JWT_SECRET'),
+
+  CLOUDINARY_CLOUD_NAME: requiredEnv('CLOUDINARY_CLOUD_NAME'),
+  CLOUDINARY_API_KEY: requiredEnv('CLOUDINARY_API_KEY'),
+  CLOUDINARY_SECRET_KEY: requiredEnv('CLOUDINARY_SECRET_KEY'),
+  CLOUDINARY_URL: requiredEnv('CLOUDINARY_URL'),
 };

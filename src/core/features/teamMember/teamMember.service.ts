@@ -74,3 +74,14 @@ export const updateTeamMemberRole = async (
 export const getTeamsForProfile = async (profileId: Types.ObjectId) => {
   return TeamMember.find({ profileId })
 };
+
+export const getTeamMembersCount = async (teamId: Types.ObjectId): Promise<number> => {
+  return TeamMember.countDocuments({ teamId });
+};
+
+export const getTeamMemberById = async (
+  teamId: string,
+  profileId: string
+): Promise<TeamMemberDocument | null> => {
+  return TeamMember.findOne({ teamId, profileId }).populate('profileId');
+};

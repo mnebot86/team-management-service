@@ -3,22 +3,15 @@ import { StatusCodes } from 'http-status-codes';
 import mongoose, { Types } from 'mongoose';
 import {
   getTeamMembers,
-  getTeamsForProfile,
-  updateTeamMemberRole,
-  removeTeamMember,
   addTeamMember,
+  getTeamMembersCount,
+  getTeamMemberById
 } from './teamMember.service';
-import { Profile } from '../profile/profile.model';
 import { AuthRequest } from '../team/team.types';
+import { uploadUserProfileImage } from '../imageUploader/imageUploader.service';
 import { createProfile } from '../profile/profile.service';
 import { sendError, sendSuccess } from '../../shared/utils/response';
 import { logger } from '../../shared/utils/logger';
-
-// Helper to get the claimed profile for a user
-const getProfileForUser = async (userId: string) => {
-  if (!mongoose.Types.ObjectId.isValid(userId)) return null;
-  return Profile.findOne({ createdByUserId: userId, isClaimed: true });
-};
 
 export const getRoster = async (req: Request, res: Response) => {
   const teamId = req.params.teamId as string;
@@ -37,6 +30,10 @@ export const getRoster = async (req: Request, res: Response) => {
         lastName: string;
         isClaimed: boolean;
         linkCode?: string;
+        avatar?: {
+          url: string;
+          publicId: string;
+        };
       };
 
       return {
@@ -46,6 +43,9 @@ export const getRoster = async (req: Request, res: Response) => {
         role: member.role,
         isClaimed: profile.isClaimed,
         linkCode: profile.linkCode,
+        imageUrl: profile.avatar?.url || null,
+        jerseyNumber: member.jerseyNumber,
+        positions: member.positions,
         createdAt: member.createdAt,
         updatedAt: member.updatedAt,
       };
@@ -61,75 +61,25 @@ export const getRoster = async (req: Request, res: Response) => {
   }
 };
 
-export const getMyTeams = async (req: AuthRequest, res: Response) => {
-  const userId = req.user?.id;
-
-  if (!userId) {
-    return res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: 'User is unauthorized' });
-  }
-
-  try {
-    const profile = await getProfileForUser(userId);
-    if (!profile) {
-      return res.status(StatusCodes.OK).json({ success: true, data: [] });
-    }
-
-    const memberships = await getTeamsForProfile(profile._id);
-    const teams = memberships.map((m) => m.teamId);
-
-    return res.status(StatusCodes.OK).json({ success: true, data: teams });
-  } catch {
-    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to fetch teams' });
-  }
-};
-
-export const patchMemberRole = async (req: Request, res: Response) => {
+export const getRosterCount = async (req: AuthRequest, res: Response) => {
   const teamId = req.params.teamId as string;
-  const profileId = req.params.profileId as string;
-  const { role } = req.body as { role?: 'owner' | 'coach' | 'player' };
 
-  if (!mongoose.Types.ObjectId.isValid(teamId) || !mongoose.Types.ObjectId.isValid(profileId)) {
-    return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Invalid IDs' });
-  }
-
-  if (!role) {
-    return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Role is required' });
+  if (!mongoose.Types.ObjectId.isValid(teamId)) {
+    return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Invalid team ID' });
   }
 
   try {
-    const updated = await updateTeamMemberRole(
-      new mongoose.Types.ObjectId(teamId),
-      new mongoose.Types.ObjectId(profileId),
-      role
-    );
+    const count = await getTeamMembersCount(new mongoose.Types.ObjectId(teamId));
 
-    if (!updated) {
-      return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Team member not found' });
-    }
+    console.log('Roster count:', count);
 
-    return res.status(StatusCodes.OK).json({ success: true, data: updated });
+    return sendSuccess(res, StatusCodes.OK, { count }, 'Team roster count fetched successfully');
   } catch {
-    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to update the team member role' });
-  }
-};
-
-export const deleteMember = async (req: Request, res: Response) => {
-  const teamId = req.params.teamId as string;
-  const profileId = req.params.profileId as string;
-
-  if (!mongoose.Types.ObjectId.isValid(teamId) || !mongoose.Types.ObjectId.isValid(profileId)) {
-    return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Invalid IDs' });
-  }
-
-  try {
-    await removeTeamMember(
-      new mongoose.Types.ObjectId(teamId),
-      new mongoose.Types.ObjectId(profileId)
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to fetch the roster count'
     );
-
-    return res.status(StatusCodes.OK).json({ success: true, message: 'Member removed' });
-  } catch {
-    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to remove the team member' });
   }
 };
 
@@ -153,18 +103,43 @@ export const addPlayerToRoster = async (req: AuthRequest, res: Response) => {
     return sendError(res, StatusCodes.BAD_REQUEST, 'Last name is required');
   }
 
+  if (!teamId || Array.isArray(teamId) || !mongoose.Types.ObjectId.isValid(teamId)) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid team ID');
+  }
+
   try {
     session = await mongoose.startSession();
 
     session.startTransaction();
 
+    let avatar;
+
+    if (req.file) {
+      avatar = await uploadUserProfileImage(req.file.path);
+    }
+
+    const payload: {
+      firstName: string;
+      lastName: string;
+      createdByUserId: Types.ObjectId;
+      isClaimed: boolean;
+      avatar?: {
+        url: string;
+        publicId: string;
+      };
+    } = {
+      firstName,
+      lastName,
+      createdByUserId: new Types.ObjectId(user!.id as string),
+      isClaimed: false,
+    };
+
+    if (avatar) {
+      payload.avatar = avatar;
+    }
+
     const newProfile = await createProfile(
-      {
-        firstName,
-        lastName,
-        createdByUserId: new Types.ObjectId(user?.id),
-        isClaimed: false,
-      },
+      payload,
       session
     );
 
@@ -185,6 +160,7 @@ export const addPlayerToRoster = async (req: AuthRequest, res: Response) => {
     return sendSuccess(res, StatusCodes.OK, newMember, 'New team member added successfully');
   } catch (error) {
     logger.error({ err: error }, 'Error adding player to roster');
+
     await session?.abortTransaction();
 
     session?.endSession();
@@ -194,5 +170,38 @@ export const addPlayerToRoster = async (req: AuthRequest, res: Response) => {
       StatusCodes.INTERNAL_SERVER_ERROR,
       'An error occurred while adding the player to the roster'
     );
+  }
+};
+
+export const getTeamMember = async (req: AuthRequest, res: Response) => {
+  const teamId = req.params.teamId as string;
+  const profileId = req.params.profileId as string;
+
+  if (!mongoose.Types.ObjectId.isValid(teamId) || !mongoose.Types.ObjectId.isValid(profileId)) {
+    return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Invalid IDs' });
+  }
+
+  try {
+    const member = await getTeamMemberById(teamId, profileId);
+
+    if (!member) {
+      return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Team member not found' });
+    }
+
+    const modifiedMember = {
+      firstName: (member.profileId as any).firstName,
+      lastName: (member.profileId as any).lastName,
+      role: member.role,
+      jerseyNumber: member.jerseyNumber,
+      positions: member.positions,
+      createdAt: member.createdAt,
+      updatedAt: member.updatedAt,
+    }
+
+    return res.status(StatusCodes.OK).json({ success: true, data: modifiedMember });
+  } catch (error) {
+    logger.error({ teamId, profileId, error }, 'Error fetching team member');
+
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to fetch the team member' });
   }
 };

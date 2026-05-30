@@ -6,6 +6,8 @@ export interface TeamMemberDocument extends Document {
   teamId: Types.ObjectId;
   profileId: Types.ObjectId;
   role: TeamRole;
+  jerseyNumber?: string;
+  positions?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,6 +31,14 @@ const teamMemberSchema = new Schema<TeamMemberDocument>(
       enum: ['owner', 'coach', 'player'],
       required: true,
     },
+    jerseyNumber: {
+      type: String,
+      required: false,
+    },
+    positions: {
+      type: [String],
+      required: false,
+    }
   },
   {
     timestamps: true,

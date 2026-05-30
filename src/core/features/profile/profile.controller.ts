@@ -12,6 +12,7 @@ import { AuthRequest } from '../team/team.types';
 import { StatusCodes } from 'http-status-codes';
 import { sendSuccess, sendError } from '../../shared/utils/response';
 import { createUserProfile } from '../userProfile/userProfile.service';
+import { uploadUserProfileImage } from '../imageUploader/imageUploader.service';
 
 const toObjectId = (id: string) => new Types.ObjectId(id);
 
@@ -29,14 +30,20 @@ export const createProfileForUserHandler = async (req: AuthRequest, res: Respons
   try {
     const userId = toObjectId(req.user.id);
 
-    const profile = await createProfileForUser(
+    const profilePayload: any = {
       userId,
-      firstName.trim(),
-      lastName?.trim()
-    );
+      firstName: firstName.trim(),
+      lastName: lastName?.trim(),
+    };
+
+    if (req.file) {
+      profilePayload.avatar = await uploadUserProfileImage(req.file.path);
+    }
+
+    const profile = await createProfileForUser(profilePayload);
 
     await createUserProfile({
-      userId: new mongoose.Types.ObjectId(req.user.id),
+      userId,
       profileId: profile._id,
       role: 'player',
     });

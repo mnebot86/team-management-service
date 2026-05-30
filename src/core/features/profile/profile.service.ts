@@ -20,6 +20,10 @@ export type CreateProfileInput = {
   lastName?: string;
   createdByUserId: Types.ObjectId;
   isClaimed: boolean;
+  avatar?: {
+    url: string;
+    publicId: string;
+  };
 };
 
 export const createProfile = async (
@@ -45,14 +49,24 @@ export const createProfile = async (
   return profile;
 };
 
-export const createProfileForUser = async (
-  userId: Types.ObjectId,
-  firstName: string,
-  lastName?: string
-): Promise<ProfileDocument> => {
+export const createProfileForUser = async ({
+  userId,
+  firstName,
+  lastName,
+  avatar,
+}: {
+  userId: Types.ObjectId;
+  firstName: string;
+  lastName?: string;
+  avatar?: {
+    url: string;
+    publicId: string;
+  };
+}): Promise<ProfileDocument> => {
   return createProfile({
     firstName,
     ...(lastName !== undefined ? { lastName } : {}),
+    ...(avatar !== undefined ? { avatar } : {}),
     createdByUserId: userId,
     isClaimed: true,
   });

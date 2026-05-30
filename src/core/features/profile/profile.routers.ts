@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { upload } from '../../middleware/upload.middleware';
 import {
   createProfileForUserHandler,
   createProfileByCoachHandler,
@@ -10,8 +11,8 @@ import {
 
 const router = Router();
 
-router.post('/', createProfileForUserHandler);
-router.post('/coach', createProfileByCoachHandler);
+router.post('/', upload.single('avatar'), createProfileForUserHandler);
+router.post('/coach', upload.single('avatar'), createProfileByCoachHandler);
 router.get('/', getProfilesByCreatorHandler);
 router.get('/:id', getProfileByIdHandler);
 router.post('/link', linkProfileHandler);

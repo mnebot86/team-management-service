@@ -1,11 +1,19 @@
 import { Router } from 'express';
 import * as teamMemberController from './teamMember.controller';
 
+import { upload } from '../../middleware/upload.middleware';
+
 
 const router = Router();
 
-router.post('/:teamId', teamMemberController.addPlayerToRoster);
+router.post(
+  '/:teamId',
+  upload.single('avatar'),
+  teamMemberController.addPlayerToRoster,
+);
 router.get('/:teamId', teamMemberController.getRoster);
+router.get('/:teamId/count', teamMemberController.getRosterCount);
+router.get('/:teamId/member/:profileId', teamMemberController.getTeamMember);
 
 
 export default router;

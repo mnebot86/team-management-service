@@ -8,6 +8,10 @@ export interface ProfileDocument extends Document {
   createdAt: Date;
   updatedAt: Date;
   linkCode: string;
+  avatar?: {
+    url: string;
+    publicId: string;
+  };
 }
 
 const profileSchema = new Schema<ProfileDocument>(
@@ -20,6 +24,14 @@ const profileSchema = new Schema<ProfileDocument>(
     lastName: {
       type: String,
       trim: true,
+    },
+    avatar: {
+      url: {
+        type: String,
+      },
+      publicId: {
+        type: String,
+      },
     },
     createdByUserId: {
       type: Schema.Types.ObjectId,
