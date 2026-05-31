@@ -194,6 +194,8 @@ export const getTeamMember = async (req: AuthRequest, res: Response) => {
       role: member.role,
       jerseyNumber: member.jerseyNumber,
       positions: member.positions,
+      avatar: (member.profileId as any).avatar?.url || null,
+      isClaimed: (member.profileId as any).isClaimed,
       createdAt: member.createdAt,
       updatedAt: member.updatedAt,
     }
