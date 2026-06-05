@@ -120,3 +120,7 @@ export const searchProfilesByName = async (
     firstName: { $regex: name, $options: 'i' },
   }).limit(10);
 };
+
+export const updateProfile = async (profileId: Types.ObjectId, updateData: Partial<ProfileDocument>): Promise<ProfileDocument | null> => {
+  return Profile.findByIdAndUpdate({ _id: profileId }, updateData, { new: true });
+}

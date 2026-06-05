@@ -15,5 +15,10 @@ router.get('/:teamId', teamMemberController.getRoster);
 router.get('/:teamId/count', teamMemberController.getRosterCount);
 router.get('/:teamId/member/:profileId', teamMemberController.getTeamMember);
 
+router.patch(
+  '/:teamId/member/:profileId',
+  upload.single('avatar'),
+  teamMemberController.editTeamMember,
+);
 
 export default router;

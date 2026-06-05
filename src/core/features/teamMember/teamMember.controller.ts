@@ -5,11 +5,12 @@ import {
   getTeamMembers,
   addTeamMember,
   getTeamMembersCount,
-  getTeamMemberById
+  getTeamMemberById,
+  updateTeamMember
 } from './teamMember.service';
 import { AuthRequest } from '../team/team.types';
 import { uploadUserProfileImage } from '../imageUploader/imageUploader.service';
-import { createProfile } from '../profile/profile.service';
+import { createProfile, updateProfile } from '../profile/profile.service';
 import { sendError, sendSuccess } from '../../shared/utils/response';
 import { logger } from '../../shared/utils/logger';
 
@@ -195,15 +196,86 @@ export const getTeamMember = async (req: AuthRequest, res: Response) => {
       jerseyNumber: member.jerseyNumber,
       positions: member.positions,
       avatar: (member.profileId as any).avatar?.url || null,
+      avatarPublicId: (member.profileId as any).avatar?.publicId || null,
       isClaimed: (member.profileId as any).isClaimed,
       createdAt: member.createdAt,
       updatedAt: member.updatedAt,
     }
 
-    return res.status(StatusCodes.OK).json({ success: true, data: modifiedMember });
+    return sendSuccess(res, StatusCodes.OK, modifiedMember, 'Fetched team member successfully');
   } catch (error) {
     logger.error({ teamId, profileId, error }, 'Error fetching team member');
 
-    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to fetch the team member' });
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'An error occurred while fetching the team member'
+    );
+  }
+};
+
+export const editTeamMember = async (req: AuthRequest, res: Response) => {
+  const { profileId } = req.params;
+
+  if (!profileId || Array.isArray(profileId) || !mongoose.Types.ObjectId.isValid(profileId)) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid profile ID');
+  }
+
+  const {
+    firstName,
+    lastName,
+    positions,
+    jerseyNumber,
+    avatarPublicId,
+  } = req.body;
+
+  let avatar;
+
+  try {
+    if (req.file) {
+      avatar = await uploadUserProfileImage(req.file.path, avatarPublicId);
+    }
+
+    const profilePayload: Partial<{
+      firstName: string;
+      lastName: string;
+      avatar: {
+        url: string;
+        publicId: string;
+      };
+    }> = {
+      firstName,
+      lastName,
+    };
+
+    if (avatar) {
+      profilePayload.avatar = {
+        url: avatar.url,
+        publicId: avatar.publicId,
+      };
+    }
+
+    const positionsArray = positions.split(',').map((pos: string) => pos.trim());
+
+    const teamMemberPayload = {
+      positions: positionsArray,
+      jerseyNumber,
+    }
+
+    const objectProfileId = new Types.ObjectId(profileId);
+
+    await updateProfile(objectProfileId, profilePayload);
+
+    const editedTeamMember = await updateTeamMember(objectProfileId, teamMemberPayload);
+
+    return sendSuccess(res, StatusCodes.OK, editedTeamMember, 'Team member updated successfully');
+  } catch (error) {
+    logger.error({ error }, 'Error editing team member');
+
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'An error occurred while editing the team member'
+    );
   }
 };
