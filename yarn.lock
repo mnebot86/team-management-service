@@ -2476,6 +2476,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"dayjs@npm:^1.11.21":
+  version: 1.11.21
+  resolution: "dayjs@npm:1.11.21"
+  checksum: 10c0/bd97dfdc4bfea3c66268635690313828b386faa040fbc1f829ff42a2bd748b72c9d9b3c8f9616ce9e61fcb78923f1461a462c969c54b1084458ae1b715898fb0
+  languageName: node
+  linkType: hard
+
 "debug@npm:2.6.9":
   version: 2.6.9
   resolution: "debug@npm:2.6.9"
@@ -6506,6 +6513,7 @@ __metadata:
     bcrypt: "npm:^6.0.0"
     cloudinary: "npm:^2.10.0"
     cors: "npm:^2.8.6"
+    dayjs: "npm:^1.11.21"
     dotenv: "npm:^17.4.2"
     eslint: "npm:^9.39.4"
     eslint-config-prettier: "npm:^10.1.8"

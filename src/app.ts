@@ -10,6 +10,7 @@ import teamRoutes from './core/features/team/team.routes'
 import teamMember from './core/features/teamMember/teamMember.routers';
 import inviteRoutes from './core/features/invites/invite.routes';
 import profileRoutes from './core/features/profile/profile.routers';
+import scheduleRoutes from './core/features/schedule/schedule.router';
 
 // middleware
 import { errorMiddleware } from './core/middleware/error.middleware';
@@ -44,6 +45,7 @@ app.use('/api/v1/teams', protect, teamRoutes);
 app.use('/api/v1/team-members', protect, teamMember);
 app.use('/api/v1/invites', protect, inviteRoutes);
 app.use('/api/v1/profiles', protect, profileRoutes);
+app.use('/api/v1/schedules', protect, scheduleRoutes);
 
 // error handler (must be last)
 app.use(errorMiddleware);
