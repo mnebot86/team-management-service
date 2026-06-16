@@ -23,6 +23,13 @@ export interface ScheduleDocument extends Document {
     daysOfWeek: number[];
     endDate: Date | null;
   };
+  attendance: {
+    profileId: Types.ObjectId;
+    status: 'present' | 'late' | 'absent';
+    note?: string;
+    markedByUserId: Types.ObjectId;
+    markedAt: Date;
+  }[];
   createdByUserId: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -96,6 +103,36 @@ const scheduleSchema = new Schema<ScheduleDocument>(
         type: Date,
         default: null,
       },
+    },
+    attendance: {
+      type: [
+        {
+          profileId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Profile',
+            required: true,
+          },
+          status: {
+            type: String,
+            enum: ['present', 'late', 'absent'],
+            required: true,
+          },
+          note: {
+            type: String,
+            default: '',
+          },
+          markedByUserId: {
+            type: Schema.Types.ObjectId,
+            ref: 'User',
+            required: true,
+          },
+          markedAt: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
+      default: [],
     },
     createdByUserId: {
       type: Schema.Types.ObjectId,

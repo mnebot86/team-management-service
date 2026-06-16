@@ -71,6 +71,7 @@ interface ScheduleOccurrence {
   startTime?: Date | null;
   endTime?: Date | null;
   occurrenceStartDate: Date;
+  attendance?: ScheduleDocument['attendance'];
   location: {
     name?: string;
     street?: string;
@@ -108,6 +109,7 @@ const expandRecurringSchedules = (
             .millisecond(0)
             .toDate()
           : schedule.startDate,
+        attendance: schedule.attendance,
         location: schedule.location,
       });
 
@@ -144,6 +146,7 @@ const expandRecurringSchedules = (
               .millisecond(0)
               .toDate()
             : new Date(currentDate),
+          attendance: schedule.attendance,
           location: schedule.location,
         });
       }
@@ -197,4 +200,64 @@ export const getTeamSchedule = async (
       data: upcoming,
     },
   ].filter((section) => section.data.length > 0);
+};
+
+export const getScheduleById = async (
+  scheduleId: Types.ObjectId,
+): Promise<ScheduleDocument | null> => {
+  return Schedule.findById(scheduleId);
+};
+
+export const getNextPractice = async (
+  teamId: Types.ObjectId,
+): Promise<ScheduleOccurrence | null> => {
+  const schedules = await Schedule.find({
+    teamId,
+    type: 'practice',
+  });
+
+  const now = new Date();
+
+  const occurrences = expandRecurringSchedules(schedules);
+
+  return (
+    occurrences.find(
+      (occurrence) => occurrence.occurrenceStartDate >= now,
+    ) ?? null
+  );
+};
+
+export const getNextGame = async (
+  teamId: Types.ObjectId,
+): Promise<ScheduleOccurrence | null> => {
+  const schedules = await Schedule.find({
+    teamId,
+    type: 'game',
+  });
+
+  const now = new Date();
+
+  const occurrences = expandRecurringSchedules(schedules);
+
+  return (
+    occurrences.find(
+      (occurrence) => occurrence.occurrenceStartDate >= now,
+    ) ?? null
+  );
+};
+
+export const updateAttendance = async (
+  scheduleId: Types.ObjectId,
+  attendance: ScheduleDocument['attendance'],
+): Promise<ScheduleDocument | null> => {
+  return Schedule.findByIdAndUpdate(
+    scheduleId,
+    {
+      attendance,
+    },
+    {
+      new: true,
+      runValidators: true,
+    },
+  );
 };

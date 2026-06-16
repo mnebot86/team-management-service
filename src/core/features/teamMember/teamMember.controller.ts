@@ -24,33 +24,43 @@ export const getRoster = async (req: Request, res: Response) => {
   try {
     const members = await getTeamMembers(new mongoose.Types.ObjectId(teamId));
 
-    const modifiedMembers = members.map((member) => {
-      const profile = member.profileId as unknown as {
-        _id: Types.ObjectId;
-        firstName: string;
-        lastName: string;
-        isClaimed: boolean;
-        linkCode?: string;
-        avatar?: {
-          url: string;
-          publicId: string;
+    const modifiedMembers = members
+      .map((member) => {
+        const profile = member.profileId as unknown as {
+          _id: Types.ObjectId;
+          firstName: string;
+          lastName: string;
+          isClaimed: boolean;
+          linkCode?: string;
+          avatar?: {
+            url: string;
+            publicId: string;
+          };
         };
-      };
 
-      return {
-        profileId: profile._id,
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        role: member.role,
-        isClaimed: profile.isClaimed,
-        linkCode: profile.linkCode,
-        imageUrl: profile.avatar?.url || null,
-        jerseyNumber: member.jerseyNumber,
-        positions: member.positions,
-        createdAt: member.createdAt,
-        updatedAt: member.updatedAt,
-      };
-    });
+        return {
+          profileId: profile._id,
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          role: member.role,
+          isClaimed: profile.isClaimed,
+          linkCode: profile.linkCode,
+          imageUrl: profile.avatar?.url || null,
+          jerseyNumber: member.jerseyNumber,
+          positions: member.positions,
+          createdAt: member.createdAt,
+          updatedAt: member.updatedAt,
+        };
+      })
+      .sort((a, b) => {
+        const lastNameCompare = a.lastName.localeCompare(b.lastName);
+
+        if (lastNameCompare !== 0) {
+          return lastNameCompare;
+        }
+
+        return a.firstName.localeCompare(b.firstName);
+      });
 
     return sendSuccess(res, StatusCodes.OK, modifiedMembers, 'Team roster fetched successfully');
   } catch {

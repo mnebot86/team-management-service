@@ -110,3 +110,111 @@ export const getTeamSchedule = async (
     );
   }
 };
+
+export const getNextPractice = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<Response> => {
+  const { teamId } = req.params;
+
+  if (!teamId || !Types.ObjectId.isValid(teamId as string)) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid team ID');
+  }
+
+  try {
+    const practice = await scheduleService.getNextPractice(
+      new Types.ObjectId(teamId as string),
+    );
+
+    return sendSuccess(
+      res,
+      StatusCodes.OK,
+      practice,
+      'Next practice retrieved successfully',
+    );
+  } catch (error) {
+    logger.error({ error }, 'Error retrieving next practice');
+
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to retrieve next practice',
+    );
+  }
+};
+
+export const getNextGame = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<Response> => {
+  const { teamId } = req.params;
+
+  if (!teamId || !Types.ObjectId.isValid(teamId as string)) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid team ID');
+  }
+
+  try {
+    const game = await scheduleService.getNextGame(
+      new Types.ObjectId(teamId as string),
+    );
+
+    return sendSuccess(
+      res,
+      StatusCodes.OK,
+      game,
+      'Next game retrieved successfully',
+    );
+  } catch (error) {
+    logger.error({ error }, 'Error retrieving next game');
+
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to retrieve next game',
+    );
+  }
+};
+
+export const updateAttendance = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<Response> => {
+  const { scheduleId } = req.params;
+  const { attendance } = req.body;
+  const markedByUserId = req.user?.id;
+
+  if (!scheduleId || !Types.ObjectId.isValid(scheduleId as string)) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid schedule ID');
+  }
+
+  if (!markedByUserId || !Types.ObjectId.isValid(markedByUserId)) {
+    return sendError(res, StatusCodes.UNAUTHORIZED, 'Invalid user');
+  }
+
+  try {
+    const attendanceWithUser = attendance.map((record: any) => ({
+      ...record,
+      markedByUserId: new Types.ObjectId(markedByUserId),
+    }));
+
+    const schedule = await scheduleService.updateAttendance(
+      new Types.ObjectId(scheduleId as string),
+      attendanceWithUser,
+    );
+
+    return sendSuccess(
+      res,
+      StatusCodes.OK,
+      schedule,
+      'Attendance updated successfully',
+    );
+  } catch (error) {
+    logger.error({ error }, 'Error updating attendance');
+
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to update attendance',
+    );
+  }
+};
