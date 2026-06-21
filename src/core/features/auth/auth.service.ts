@@ -3,10 +3,21 @@ import { User } from '../user/user.model';
 import { UserProfile } from '../userProfile/userProfile.model';
 import { RegisterInput } from './auth.types';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { env } from '../../..//config/env';
+import { emailService } from '../../../shared/email/email.service';
 
 type AuthInput = {
   email: string;
+  password: string;
+};
+
+type ForgotPasswordInput = {
+  email: string;
+};
+
+type ResetPasswordInput = {
+  token: string;
   password: string;
 };
 
@@ -69,4 +80,58 @@ export const login = async ({ email, password }: AuthInput) => {
     },
     token,
   };
+};
+
+export const forgotPassword = async ({ email }: ForgotPasswordInput) => {
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return;
+  }
+
+  const resetPasswordToken = crypto.randomBytes(32).toString('hex');
+
+  const resetPasswordExpiresAt = new Date(
+    Date.now() + (60 * 60 * 1000),
+  );
+
+  user.resetPasswordToken = resetPasswordToken;
+  user.resetPasswordExpiresAt = resetPasswordExpiresAt;
+
+  await user.save();
+
+  const resetUrl =
+    `${env.APP_URL}reset-password?token=${resetPasswordToken}`;
+
+  await emailService.sendForgotPasswordEmail(
+    user.email,
+    resetUrl,
+  );
+};
+
+export const resetPassword = async ({
+  token,
+  password,
+}: ResetPasswordInput) => {
+  const user = await User.findOne({
+    resetPasswordToken: token,
+    resetPasswordExpiresAt: {
+      $gt: new Date(),
+    },
+  });
+
+  if (!user) {
+    throw new Error('INVALID_OR_EXPIRED_TOKEN');
+  }
+
+  const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+  user.password = hashedPassword;
+
+  user.set({
+    resetPasswordToken: undefined,
+    resetPasswordExpiresAt: undefined,
+  });
+
+  await user.save();
 };

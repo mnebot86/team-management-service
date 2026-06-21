@@ -64,6 +64,7 @@ export const register = async (req: Request, res: Response) => {
   }
 };
 
+
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
@@ -104,6 +105,96 @@ export const login = async (req: Request, res: Response) => {
       res,
       StatusCodes.INTERNAL_SERVER_ERROR,
       'Failed to login user',
+      error,
+    );
+  }
+};
+
+export const forgotPassword = async (req: Request, res: Response) => {
+  const { email } = req.body;
+
+  const emailTrimmed = typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+  if (!emailTrimmed) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'email is required');
+  }
+
+  if (!validateWithRegex(emailTrimmed, REGEX.EMAIL)) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'email is invalid');
+  }
+
+  try {
+    const results = await authService.forgotPassword({ email: emailTrimmed });
+
+    return sendSuccess(
+      res,
+      StatusCodes.OK,
+      null,
+      'If an account exists, reset instructions have been sent',
+    );
+  } catch (error: unknown) {
+    logger.error({ err: error }, 'Forgot Password Error');
+
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to process forgot password request',
+      error,
+    );
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  const { token, password } = req.body;
+
+  const tokenTrimmed = typeof token === 'string' ? token.trim() : '';
+  const passwordTrimmed = typeof password === 'string' ? password.trim() : '';
+
+  if (!tokenTrimmed) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'token is required');
+  }
+
+  if (!passwordTrimmed) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'password is required');
+  }
+
+  const passwordValidation = validatePassword(passwordTrimmed);
+
+  if (!passwordValidation.valid) {
+    return sendError(
+      res,
+      StatusCodes.BAD_REQUEST,
+      passwordValidation.message || 'Invalid password',
+    );
+  }
+
+  try {
+    await authService.resetPassword({
+      token: tokenTrimmed,
+      password: passwordTrimmed,
+    });
+
+    return sendSuccess(
+      res,
+      StatusCodes.OK,
+      null,
+      'Password reset successfully',
+    );
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'INVALID_OR_EXPIRED_TOKEN') {
+      return sendError(
+        res,
+        StatusCodes.BAD_REQUEST,
+        'Invalid or expired reset link',
+      );
+    }
+
+    logger.error({ err: error }, 'Reset Password Error');
+
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to reset password',
       error,
     );
   }
