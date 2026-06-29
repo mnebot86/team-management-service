@@ -24,6 +24,32 @@ export const getTeamById = async (teamId: string) => {
   return Team.findById(teamId);
 };
 
+export const getTeamByIdForUser = async (
+  teamId: string,
+  userId: string
+) => {
+  const profile = await Profile.findOne({
+    createdByUserId: userId,
+    isClaimed: true,
+  });
+
+  if (!profile) return null;
+
+  const memberships = await getTeamsForProfile(
+    profile._id as Types.ObjectId
+  );
+
+  const isMember = memberships.some(
+    (m) => m.teamId.toString() === teamId
+  );
+
+  if (!isMember) {
+    return null;
+  }
+
+  return Team.findById(teamId);
+};
+
 export const getTeamsForUser = async (userId: string) => {
   const profile = await Profile.findOne({ createdByUserId: userId, isClaimed: true });
   if (!profile) return [];
@@ -44,6 +70,6 @@ export const deleteTeam = async (teamId: string) => {
   return await Team.findByIdAndDelete(teamId);
 };
 
-export const activeTeams = async (active, userid) => {
+// export const activeTeams = async (active, userid) => {
 
-}
+// }

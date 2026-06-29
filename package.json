@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "NODE_ENV=development ts-node-dev --respawn --transpile-only ./src/servers.ts",
-    "dev:staging": "NODE_ENV=staging ts-node-dev --respawn --transpile-only ./src/servers.ts",
+    "dev": "NODE_ENV=development ts-node-dev --respawn --transpile-only ./src/server.ts",
+    "dev:staging": "NODE_ENV=staging ts-node-dev --respawn --transpile-only ./src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "start:staging": "NODE_ENV=staging node dist/server.js",
