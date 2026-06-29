@@ -43,3 +43,7 @@ export const updateTeam = async (
 export const deleteTeam = async (teamId: string) => {
   return await Team.findByIdAndDelete(teamId);
 };
+
+export const activeTeams = async (active, userid) => {
+
+}

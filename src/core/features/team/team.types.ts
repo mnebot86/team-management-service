@@ -10,6 +10,7 @@ export interface ITeam {
     userId: Types.ObjectId;
     role: 'owner' | 'coach' | 'player';
   }[];
+  active: boolean;
 }
 
 export interface AuthRequest extends Request {

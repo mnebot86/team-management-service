@@ -22,6 +22,10 @@ const teamSchema = new Schema<ITeam>(
       ref: 'User',
       required: true,
     },
+    active: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,
