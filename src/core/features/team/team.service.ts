@@ -52,6 +52,7 @@ export const getTeamByIdForUser = async (
 
 export const getTeamsForUser = async (userId: string) => {
   const profile = await Profile.findOne({ createdByUserId: userId, isClaimed: true });
+
   if (!profile) return [];
 
   const memberships = await getTeamsForProfile(profile._id as Types.ObjectId);
@@ -69,7 +70,3 @@ export const updateTeam = async (
 export const deleteTeam = async (teamId: string) => {
   return await Team.findByIdAndDelete(teamId);
 };
-
-// export const activeTeams = async (active, userid) => {
-
-// }

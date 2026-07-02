@@ -201,3 +201,24 @@ export const deleteTeam = async (req: AuthRequest, res: Response) => {
     return sendError(res, StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to delete team', error);
   }
 };
+
+export const getActiveTeamsCount = async (req: AuthRequest, res: Response) => {
+  if (!req.user?.id) {
+    return sendError(res, StatusCodes.UNAUTHORIZED, 'Unauthorized');
+  }
+
+  try {
+    const teams = await teamMemberService.getTeamsForUser(new mongoose.Types.ObjectId(req.user.profileId));
+
+    const activeTeamsCount = teams.filter((team) => team.isActive).length;
+
+    return sendSuccess(res, StatusCodes.OK, { count: activeTeamsCount }, 'Active teams count fetched successfully');
+  } catch (error) {
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to fetch active teams count',
+      error,
+    );
+  }
+};
