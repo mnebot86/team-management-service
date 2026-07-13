@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import { Response } from 'express';
 
-import * as profileService from '../profile/profile.service';
 import * as teamService from './team.service';
 import * as teamMemberService from '../teamMember/teamMember.service'
 import { StatusCodes } from 'http-status-codes';
@@ -9,6 +8,7 @@ import { sendSuccess, sendError } from '../../shared/utils/response';
 import { CreateTeamDto } from './team.dto';
 import { MONGO_ERRORS } from '../../constants/mongoErrors';
 import { AuthRequest } from './team.types';
+import { emitTeamCreated } from './team.emitter';
 
 export const createTeam = async (req: AuthRequest, res: Response) => {
   const payload: CreateTeamDto = req.body;
@@ -52,6 +52,9 @@ export const createTeam = async (req: AuthRequest, res: Response) => {
 
   try {
     const team = await teamService.createTeam(sanitizedPayload);
+
+    emitTeamCreated(req.user.id, team);
+
     return sendSuccess(res, StatusCodes.CREATED, team, 'Team created successfully');
   } catch (error) {
     const err = error as { code?: number };

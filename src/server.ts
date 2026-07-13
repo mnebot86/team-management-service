@@ -1,7 +1,9 @@
-import { logger } from './core/shared/utils/logger';
 import app from './app';
 import { connectDB } from './config/db';
+import { createServer } from 'http';
+import { logger } from './core/shared/utils/logger';
 import { env } from './config/env';
+import { initializeSocket } from './core/socket';
 
 const { PORT } = env;
 
@@ -9,7 +11,11 @@ const startServer = async () => {
   try {
     await connectDB();
 
-    app.listen(PORT, () => {
+    const httpServer = createServer(app);
+
+    initializeSocket(httpServer);
+
+    httpServer.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT}`);
     });
   } catch (error) {

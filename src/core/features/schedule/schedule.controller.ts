@@ -6,6 +6,7 @@ import * as scheduleService from './schedule.service';
 import { sendError, sendSuccess } from '../../shared/utils/response';
 import { AuthRequest } from '../team/team.types';
 import { logger } from '../../shared/utils/logger';
+import { emitScheduleCreated } from './schedule.emitters';
 
 export const createSchedule = async (
   req: AuthRequest,
@@ -60,6 +61,8 @@ export const createSchedule = async (
       recurrence,
       createdByUserId: new Types.ObjectId(createdByUserId),
     });
+
+    emitScheduleCreated(teamId, schedule);
 
     return sendSuccess(
       res,

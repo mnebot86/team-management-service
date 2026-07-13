@@ -1,14 +1,7 @@
-import { env } from "../../config/env";
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
 import { StatusCodes } from 'http-status-codes';
 import { sendError } from '../shared/utils/response';
-
-type JwtPayload = {
-  userId: string;
-  email: string;
-  profileId?: string
-};
+import { verifyAccessToken, JwtPayload } from '../auth/jwt';
 
 interface AuthRequest extends Request {
   user?: {
@@ -44,18 +37,7 @@ export const protect = (
   }
 
   try {
-    if (!env.JWT_SECRET) {
-      return sendError(
-        res,
-        StatusCodes.INTERNAL_SERVER_ERROR,
-        'JWT secret not configured'
-      );
-    }
-
-    const decoded = jwt.verify(
-      token,
-      env.JWT_SECRET
-    ) as unknown as JwtPayload;
+    const decoded: JwtPayload = verifyAccessToken(token);
 
     (req as AuthRequest).user = {
       id: decoded.userId,

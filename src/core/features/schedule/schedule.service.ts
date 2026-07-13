@@ -170,16 +170,30 @@ export const getTeamSchedule = async (
 
   const now = new Date();
 
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
+
   const endOfWeek = new Date(now);
   endOfWeek.setDate(now.getDate() + (7 - now.getDay()));
   endOfWeek.setHours(23, 59, 59, 999);
 
-  const thisWeek = events.filter((event) => {
+  const today = events.filter(event => {
     if (!event.startDate) return false;
 
     const eventDate = new Date(event.startDate);
 
-    return eventDate >= now && eventDate <= endOfWeek;
+    return eventDate >= startOfToday && eventDate <= endOfToday;
+  });
+
+  const thisWeek = events.filter(event => {
+    if (!event.startDate) return false;
+
+    const eventDate = new Date(event.startDate);
+
+    return eventDate > endOfToday && eventDate <= endOfWeek;
   });
 
   const upcoming = events.filter((event) => {
@@ -192,6 +206,10 @@ export const getTeamSchedule = async (
 
   return [
     {
+      title: 'Today',
+      data: today,
+    },
+    {
       title: 'This Week',
       data: thisWeek,
     },
@@ -199,7 +217,7 @@ export const getTeamSchedule = async (
       title: 'Upcoming',
       data: upcoming,
     },
-  ].filter((section) => section.data.length > 0);
+  ].filter(section => section.data.length > 0);
 };
 
 export const getScheduleById = async (
