@@ -146,6 +146,38 @@ export const getNextPractice = async (
   }
 };
 
+export const getLastPractice = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<Response> => {
+  const { teamId } = req.params;
+
+  if (!teamId || !Types.ObjectId.isValid(teamId as string)) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid team ID');
+  }
+
+  try {
+    const attendanceSummary = await scheduleService.getLastPractice(
+      new Types.ObjectId(teamId as string),
+    );
+
+    return sendSuccess(
+      res,
+      StatusCodes.OK,
+      attendanceSummary,
+      'Last practice attendance retrieved successfully',
+    );
+  } catch (error) {
+    logger.error({ error }, 'Error retrieving last practice attendance');
+
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to retrieve last practice attendance',
+    );
+  }
+};
+
 export const getNextGame = async (
   req: AuthRequest,
   res: Response,
@@ -218,6 +250,42 @@ export const updateAttendance = async (
       res,
       StatusCodes.INTERNAL_SERVER_ERROR,
       'Failed to update attendance',
+    );
+  }
+};
+
+export const getPlayerAttendance = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<Response> => {
+  const { profileId } = req.params;
+
+  if (!profileId || !Types.ObjectId.isValid(profileId as string)) {
+    return sendError(
+      res,
+      StatusCodes.BAD_REQUEST,
+      'Invalid profile ID',
+    );
+  }
+
+  try {
+    const attendance = await scheduleService.getPlayerAttendance(
+      new Types.ObjectId(profileId as string),
+    );
+
+    return sendSuccess(
+      res,
+      StatusCodes.OK,
+      attendance,
+      'Player attendance retrieved successfully',
+    );
+  } catch (error) {
+    logger.error({ error }, 'Error retrieving player attendance');
+
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to retrieve player attendance',
     );
   }
 };

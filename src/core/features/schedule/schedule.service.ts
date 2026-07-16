@@ -226,6 +226,7 @@ export const getScheduleById = async (
   return Schedule.findById(scheduleId);
 };
 
+
 export const getNextPractice = async (
   teamId: Types.ObjectId,
 ): Promise<ScheduleOccurrence | null> => {
@@ -243,6 +244,102 @@ export const getNextPractice = async (
       (occurrence) => occurrence.occurrenceStartDate >= now,
     ) ?? null
   );
+};
+
+
+export const getLastPractice = async (
+  teamId: Types.ObjectId,
+): Promise<{
+  present: number;
+  absent: number;
+  total: number;
+}> => {
+  const schedules = await Schedule.find({
+    teamId,
+    type: 'practice',
+  });
+
+  const now = new Date();
+
+  const occurrences = expandRecurringSchedules(schedules)
+    .filter((occurrence) => occurrence.occurrenceStartDate <= now)
+    .sort(
+      (a, b) =>
+        b.occurrenceStartDate.getTime() - a.occurrenceStartDate.getTime(),
+    );
+
+  const lastPractice = occurrences[0];
+
+  if (!lastPractice) {
+    return {
+      present: 0,
+      absent: 0,
+      total: 0,
+    };
+  }
+
+  const attendance = lastPractice.attendance ?? [];
+
+  const present = attendance.filter(
+    ({ status }) => status === 'present',
+  ).length;
+
+  const absent = attendance.filter(
+    ({ status }) => status === 'absent',
+  ).length;
+
+  const total = attendance.length;
+
+  return {
+    present,
+    absent,
+    total,
+  };
+};
+
+export const getPlayerAttendance = async (
+  profileId: Types.ObjectId,
+): Promise<{
+  present: number;
+  late: number;
+  absent: number;
+  total: number;
+}> => {
+  const schedules = await Schedule.find({
+    type: 'practice',
+    'attendance.profileId': profileId,
+  });
+
+  let present = 0;
+  let late = 0;
+  let absent = 0;
+
+  schedules.forEach((schedule) => {
+    schedule.attendance.forEach((record) => {
+      if (!record.profileId.equals(profileId)) {
+        return;
+      }
+
+      switch (record.status) {
+        case 'present':
+          present += 1;
+          break;
+        case 'late':
+          late += 1;
+          break;
+        case 'absent':
+          absent += 1;
+          break;
+      }
+    });
+  });
+
+  return {
+    present,
+    late,
+    absent,
+    total: present + late + absent,
+  };
 };
 
 export const getNextGame = async (
