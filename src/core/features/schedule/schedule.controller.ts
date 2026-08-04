@@ -6,7 +6,41 @@ import * as scheduleService from './schedule.service';
 import { sendError, sendSuccess } from '../../shared/utils/response';
 import { AuthRequest } from '../team/team.types';
 import { logger } from '../../shared/utils/logger';
-import { emitScheduleCreated } from './schedule.emitters';
+import { emitScheduleCreated, emitScheduleUpdated } from './schedule.emitters';
+import { TeamMember } from '../teamMember/teamMember.modal';
+import { createNotification } from '../notifications/notification.service';
+import { NOTIFICATION_TYPES } from '../notifications/notification.model';
+
+const notifyScheduleCreated = async (
+  teamId: string,
+  schedule: Awaited<ReturnType<typeof scheduleService.createSchedule>>,
+): Promise<void> => {
+  const type = schedule.type === 'practice'
+    ? NOTIFICATION_TYPES.PRACTICE_CREATED
+    : schedule.type === 'game'
+      ? NOTIFICATION_TYPES.GAME_CREATED
+      : null;
+
+  if (!type) {
+    return;
+  }
+
+  const recipients = await TeamMember.find({ teamId }).select('profileId');
+
+  await createNotification({
+    recipients: recipients.map(({ profileId }) => ({
+      profileId: profileId.toString(),
+    })),
+    teamId,
+    type,
+    title: schedule.title || (schedule.type === 'game' ? 'New Game' : 'New Practice'),
+    message: `A new ${schedule.type} was added to the team schedule.`,
+    entity: {
+      type: 'schedule',
+      id: schedule._id.toString(),
+    },
+  });
+};
 
 export const createSchedule = async (
   req: AuthRequest,
@@ -63,6 +97,7 @@ export const createSchedule = async (
     });
 
     emitScheduleCreated(teamId, schedule);
+    await notifyScheduleCreated(teamId, schedule);
 
     return sendSuccess(
       res,
@@ -236,6 +271,33 @@ export const updateAttendance = async (
       new Types.ObjectId(scheduleId as string),
       attendanceWithUser,
     );
+
+    if (!schedule) {
+      return sendError(res, StatusCodes.NOT_FOUND, 'Schedule not found');
+    }
+
+    const teamId = schedule.teamId.toString();
+    emitScheduleUpdated(teamId, schedule);
+
+    const recipientIds = [...new Set<string>(
+      attendanceWithUser.map((record: { profileId: Types.ObjectId | string }) =>
+        record.profileId.toString(),
+      ),
+    )];
+
+    if (recipientIds.length > 0) {
+      await createNotification({
+        recipients: recipientIds.map(profileId => ({ profileId })),
+        teamId,
+        type: NOTIFICATION_TYPES.ATTENDANCE_TAKEN,
+        title: 'Attendance Updated',
+        message: 'Attendance has been recorded for a team event.',
+        entity: {
+          type: 'schedule',
+          id: schedule._id.toString(),
+        },
+      });
+    }
 
     return sendSuccess(
       res,

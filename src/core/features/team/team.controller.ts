@@ -1,8 +1,9 @@
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import { Response } from 'express';
 
 import * as teamService from './team.service';
 import * as teamMemberService from '../teamMember/teamMember.service'
+import * as userProfileService from '../userProfile/userProfile.service'
 import { StatusCodes } from 'http-status-codes';
 import { sendSuccess, sendError } from '../../shared/utils/response';
 import { CreateTeamDto } from './team.dto';
@@ -77,7 +78,17 @@ export const getTeams = async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const teams = await teamMemberService.getTeamsForUser(new mongoose.Types.ObjectId(req.user.profileId));
+    const [userProfile] = await userProfileService.getUserProfiles(
+      new Types.ObjectId(req.user.id)
+    );
+
+    if (!userProfile) {
+      return sendError(res, StatusCodes.NOT_FOUND, 'User profile not found');
+    }
+
+    const teams = await teamMemberService.getTeamsForUser(
+      new Types.ObjectId(userProfile.profileId)
+    );
 
     const modifiedTeams = teams.map((teamMember) => {
       const teamMemberObject = teamMember.toObject();

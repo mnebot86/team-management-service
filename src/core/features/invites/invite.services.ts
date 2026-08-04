@@ -5,6 +5,7 @@ import { CreateInvitePayload } from "./types";
 import { TEAM_ROLES, TeamMember } from "../teamMember/teamMember.modal";
 import { createNotification } from "../notifications/notification.service";
 import { NOTIFICATION_TYPES } from "../notifications/notification.model";
+import { joinProfileSocketsToTeam } from '../../socket/socket';
 
 export const generateInviteCode = (
   length = 8,
@@ -138,6 +139,11 @@ export const joinTeamWithInviteCode = async ({
     profileId,
     role: invite.role,
   });
+
+  await joinProfileSocketsToTeam(
+    profileId,
+    invite.teamId.toString(),
+  );
 
   invite.usedCount += 1;
   invite.lastUsedAt = new Date();

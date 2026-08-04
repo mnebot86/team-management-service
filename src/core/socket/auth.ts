@@ -25,6 +25,7 @@ export const socketAuth = async (
 
     const profile = await UserProfile.findOne({
       userId: user._id,
+      ...(decoded.profileId ? { profileId: decoded.profileId } : {}),
     });
 
     if (!profile) {

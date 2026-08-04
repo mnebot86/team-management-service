@@ -2,6 +2,7 @@ import mongoose, { Types } from 'mongoose';
 import { TEAM_ROLES, TeamMember, TeamMemberDocument, TeamRole } from './teamMember.modal';
 import { NOTIFICATION_TYPES } from '../notifications/notification.model';
 import { createNotification } from '../notifications/notification.service';
+import { joinProfileSocketsToTeam } from '../../socket/socket';
 
 export const addTeamMember = async (
   teamId: Types.ObjectId,
@@ -23,6 +24,8 @@ export const addTeamMember = async (
   if (!teamMember) {
     throw new Error('Team member creation failed');
   }
+
+  await joinProfileSocketsToTeam(profileId.toString(), teamId.toString());
 
   const recipients = await TeamMember.find({
     teamId,

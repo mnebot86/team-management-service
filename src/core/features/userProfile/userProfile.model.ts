@@ -4,7 +4,7 @@ export type UserProfileRole = 'player' | 'coach';
 
 export interface UserProfile {
   userId: Types.ObjectId;
-  profileId: Types.ObjectId;
+  profileId: Types.ObjectId | string;
   role: UserProfileRole;
   createdAt?: Date;
   updatedAt?: Date;
