@@ -62,3 +62,9 @@ export const updatePracticePlan = async (
     }
   );
 };
+
+export const deletePracticePlan = async (
+  planId: string
+): Promise<PracticeDocument | null> => {
+  return Practice.findByIdAndDelete(planId);
+};

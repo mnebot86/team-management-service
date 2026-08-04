@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import {
   createPracticePlan,
+  deletePracticePlan,
   getPracticePlansByTeamId,
   updatePracticePlan,
 } from './practice.service';
@@ -109,6 +110,47 @@ export const updatePracticePlanController = async (
       error instanceof Error
         ? error.message
         : 'Unable to update practice plan.';
+
+    sendError(res, StatusCodes.INTERNAL_SERVER_ERROR, message);
+  }
+};
+
+export const deletePracticePlanController = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { planId } = req.params;
+    const userId = req.user?.id;
+
+    if (!planId) {
+      sendError(res, StatusCodes.BAD_REQUEST, 'Practice plan id is required.');
+      return;
+    }
+
+    if (!userId) {
+      sendError(res, StatusCodes.UNAUTHORIZED, 'Unauthorized');
+      return;
+    }
+
+    const deleted = await deletePracticePlan(planId as string);
+
+    if (!deleted) {
+      sendError(res, StatusCodes.NOT_FOUND, 'Practice plan not found.');
+      return;
+    }
+
+    sendSuccess(
+      res,
+      StatusCodes.OK,
+      null,
+      'Practice plan deleted successfully.'
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Unable to delete practice plan.';
 
     sendError(res, StatusCodes.INTERNAL_SERVER_ERROR, message);
   }

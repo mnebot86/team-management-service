@@ -1,101 +1,191 @@
+import { StatusCodes } from "http-status-codes";
+import { sendError, sendSuccess } from "../../shared/utils/response";
+import { getTeamById } from "../team/team.service";
+import { AuthRequest } from "../team/team.types";
 import { Response } from 'express';
-import mongoose from 'mongoose';
-import { StatusCodes } from 'http-status-codes';
-import { sendError, sendSuccess } from '../../shared/utils/response';
-import * as inviteService from './invite.service';
-import { Profile } from '../profile/profile.model';
-import { getTeamRole } from '../teamMember/teamMember.service';
-import type { TeamRole } from '../teamMember/teamMember.modal';
-import { AuthRequest } from '../team/team.types';
+import ROLES from "../../constants/roles";
+import { createCode, getTeamInviteCode, joinTeamWithInviteCode, updateCodeStatus } from "./invite.services";
+import { createNotification } from "../notifications/notification.service";
 
-export const createInvite = async (req: AuthRequest, res: Response) => {
-  if (!req.user?.id) {
-    return sendError(res, StatusCodes.UNAUTHORIZED, 'Unauthorized');
+export const createInviteCode = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user!.id;
+
+  const { role, maxUses, expiresAt } = req.body;
+  const { teamId } = req.params;
+
+  const team = await getTeamById(teamId as string);
+
+  if (!team) {
+    sendError(res, StatusCodes.NOT_FOUND, `Team with ID: ${teamId} does not exist`);
+    return
   }
 
-  const { teamId } = req.params as { teamId?: string };
-  const { email, role } = req.body as { email?: string; role?: string };
+  const validRoles = Object.values(ROLES);
 
-  if (!teamId || !mongoose.Types.ObjectId.isValid(teamId)) {
-    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid Team Id');
-  }
-
-  if (!email) {
-    return sendError(res, StatusCodes.BAD_REQUEST, 'Email is required');
-  }
-
-  try {
-    // resolve user's profile
-    const profile = await Profile.findOne({
-      createdByUserId: new mongoose.Types.ObjectId(req.user.id),
-      isClaimed: true,
-    });
-
-    if (!profile) {
-      return sendError(res, StatusCodes.FORBIDDEN, 'No profile found for user');
-    }
-
-    const roleInTeam = await getTeamRole(
-      new mongoose.Types.ObjectId(teamId),
-      profile._id as mongoose.Types.ObjectId
+  if (!validRoles.includes(role)) {
+    sendError(
+      res,
+      StatusCodes.BAD_REQUEST,
+      'Submitted role does not exist',
     );
 
-    if (!roleInTeam || (roleInTeam !== 'owner' && roleInTeam !== 'coach')) {
-      return sendError(res, StatusCodes.FORBIDDEN, 'Forbidden');
-    }
+    return
+  }
 
-    const invite = await inviteService.createInvite({
-      teamId,
-      email,
-      role: (role as TeamRole) || 'player',
-      invitedBy: req.user.id,
-    });
+  const payload = {
+    teamId: teamId as string,
+    role,
+    createdBy: userId,
+    maxUses: maxUses ?? 0,
+    expiresAt: expiresAt ?? null,
+  };
 
-    return sendSuccess(res, StatusCodes.CREATED, invite, 'Invite created');
+
+  try {
+    const inviteCode = await createCode(payload);
+
+    sendSuccess(res, StatusCodes.CREATED, inviteCode, `Invite Code for ${role} CREATED`);
   } catch (error) {
-    return sendError(res, StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to create invite', error);
+    const message = error instanceof Error ? error.message : 'Unable to generate code.';
+
+    sendError(res, StatusCodes.INTERNAL_SERVER_ERROR, message);
   }
 };
 
-export const getMyInvites = async (req: AuthRequest, res: Response) => {
-  if (!req.user?.id) {
-    return sendError(res, StatusCodes.UNAUTHORIZED, 'Unauthorized');
-  }
+export const getVisitCodes = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  const { teamId } = req.params;
 
   try {
-    const invites = await inviteService.getInvitesForUser(req.user.email);
+    const team = await getTeamById(teamId as string);
 
-    return sendSuccess(res, StatusCodes.OK, invites, 'Invites fetched');
+    if (!team) {
+      sendError(
+        res,
+        StatusCodes.NOT_FOUND,
+        `Team with ID: ${teamId} does not exist`,
+      );
+      return;
+    }
+
+    const sections = await getTeamInviteCode(teamId as string);
+
+    sendSuccess(
+      res,
+      StatusCodes.OK,
+      sections,
+      'Invite codes retrieved successfully.',
+    );
   } catch (error) {
-    return sendError(
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Unable to retrieve invite codes.';
+
+    sendError(
       res,
       StatusCodes.INTERNAL_SERVER_ERROR,
-      'Failed to fetch invites',
-      error
+      message,
     );
   }
 };
 
-export const acceptInvite = async (req: AuthRequest, res: Response) => {
-  if (!req.user?.id) {
-    return sendError(res, StatusCodes.UNAUTHORIZED, 'Unauthorized');
-  }
+export const toggleCodeStatus = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  const { codeId } = req.params
 
-  const { inviteId } = req.params as { inviteId?: string };
+  if (!codeId) {
+    sendError(
+      res,
+      StatusCodes.NOT_FOUND,
+      'Code Id not found',
+    );
 
-  if (!inviteId || !mongoose.Types.ObjectId.isValid(inviteId)) {
-    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid Invite Id');
+    return;
   }
 
   try {
-    const result = await inviteService.acceptInvite(inviteId, req.user.id);
+    const updatedCode = await updateCodeStatus(codeId as string);
 
-    if (!result) {
-      return sendError(res, StatusCodes.NOT_FOUND, 'Invite not found or already used');
+    if (!updatedCode) {
+      sendError(
+        res,
+        StatusCodes.NOT_FOUND,
+        'Invite code not found.',
+      );
+
+      return;
     }
 
-    return sendSuccess(res, StatusCodes.OK, result, 'Invite accepted');
+    sendSuccess(res, StatusCodes.OK, updatedCode, 'Invite code updated successfully.');
   } catch (error) {
-    return sendError(res, StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to accept invite', error);
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Unable to retrieve invite codes.';
+
+    sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      message,
+    );
+  }
+}
+
+export const joinTeam = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  const { code } = req.body;
+
+  if (!code) {
+    sendError(
+      res,
+      StatusCodes.BAD_REQUEST,
+      'Invite code is required.',
+    );
+
+    return;
+  }
+
+  try {
+    const profileId = req.user!.profileId;
+
+    if (!profileId) {
+      sendError(
+        res,
+        StatusCodes.UNAUTHORIZED,
+        'Profile not found.',
+      );
+
+      return;
+    }
+
+    const teamMember = await joinTeamWithInviteCode({
+      code,
+      profileId,
+    });
+
+    sendSuccess(
+      res,
+      StatusCodes.CREATED,
+      teamMember,
+      'Successfully joined the team.',
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Unable to join team.';
+
+    sendError(
+      res,
+      StatusCodes.BAD_REQUEST,
+      message,
+    );
   }
 };

@@ -1,7 +1,8 @@
+import { Socket } from 'socket.io';
+
 import { verifyAccessToken } from '../auth/jwt';
 import { User } from '../features/user/user.model';
-
-import { Socket } from 'socket.io';
+import { UserProfile } from '../features/userProfile/userProfile.model';
 
 export const socketAuth = async (
   socket: Socket,
@@ -22,7 +23,16 @@ export const socketAuth = async (
       return next(new Error('Authentication failed.'));
     }
 
+    const profile = await UserProfile.findOne({
+      userId: user._id,
+    });
+
+    if (!profile) {
+      return next(new Error('Profile not found.'));
+    }
+
     socket.data.user = user;
+    socket.data.profile = profile;
 
     next();
   } catch {

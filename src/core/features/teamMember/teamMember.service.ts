@@ -1,11 +1,13 @@
 import mongoose, { Types } from 'mongoose';
-import { TeamMember, TeamMemberDocument, TeamRole } from './teamMember.modal';
+import { TEAM_ROLES, TeamMember, TeamMemberDocument, TeamRole } from './teamMember.modal';
+import { NOTIFICATION_TYPES } from '../notifications/notification.model';
+import { createNotification } from '../notifications/notification.service';
 
 export const addTeamMember = async (
   teamId: Types.ObjectId,
   profileId: Types.ObjectId,
   role: TeamRole,
-  session?: mongoose.ClientSession
+  session?: mongoose.ClientSession,
 ): Promise<TeamMemberDocument> => {
   const [teamMember] = await TeamMember.create(
     [
@@ -15,12 +17,33 @@ export const addTeamMember = async (
         role,
       },
     ],
-    { session }
+    { session },
   );
 
   if (!teamMember) {
     throw new Error('Team member creation failed');
   }
+
+  const recipients = await TeamMember.find({
+    teamId,
+    role: {
+      $in: [TEAM_ROLES.OWNER, TEAM_ROLES.COACH],
+    },
+  }).select('profileId');
+
+  await createNotification({
+    recipients: recipients.map(({ profileId }) => ({
+      profileId: profileId.toString(),
+    })),
+    teamId: teamId.toString(),
+    type: NOTIFICATION_TYPES.PLAYER_JOINED,
+    title: 'New Player Joined',
+    message: 'A new player has joined the team.',
+    entity: {
+      type: 'team-member',
+      id: teamMember._id.toString(),
+    },
+  });
 
   return teamMember;
 };

@@ -1,53 +1,79 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import { Schema, model } from 'mongoose';
+import { TEAM_ROLES } from '../teamMember/teamMember.modal';
+import { ITeamInvite } from './types';
 
-export interface IInvite extends Document {
-  teamId: mongoose.Types.ObjectId;
-  email: string;
-  role: 'owner' | 'coach' | 'player';
-  invitedBy: mongoose.Types.ObjectId;
-  status: 'pending' | 'accepted' | 'expired';
-  createdAt: Date;
-  expiresAt?: Date;
-}
-
-const InviteSchema = new Schema<IInvite>(
+const teamInviteSchema = new Schema<ITeamInvite>(
   {
     teamId: {
       type: Schema.Types.ObjectId,
       ref: 'Team',
       required: true,
     },
-    email: {
-      type: String,
-      required: true,
-      lowercase: true,
-      trim: true,
-    },
+
     role: {
       type: String,
-      enum: ['owner', 'coach', 'player'],
-      default: 'player',
-    },
-    invitedBy: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
+      enum: Object.values(TEAM_ROLES),
       required: true,
     },
-    status: {
+
+    code: {
       type: String,
-      enum: ['pending', 'accepted', 'expired'],
-      default: 'pending',
+      required: true,
+      unique: true,
+      uppercase: true,
+      trim: true,
+      index: true,
     },
+
+    active: {
+      type: Boolean,
+      default: true,
+    },
+
+    maxUses: {
+      type: Number,
+      default: 0, // 0 = unlimited
+      min: 0,
+    },
+
+    usedCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    lastUsedAt: {
+      type: Date,
+      default: null,
+    },
+
     expiresAt: {
       type: Date,
+      default: null,
+    },
+
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'Profile',
+      required: true,
     },
   },
   {
     timestamps: true,
-  }
+    toJSON: {
+      virtuals: true,
+    },
+    toObject: {
+      virtuals: true,
+    },
+  },
 );
 
-// prevent duplicate active invites per email + team
-InviteSchema.index({ teamId: 1, email: 1, status: 1 }, { unique: true, partialFilterExpression: { status: 'pending' } });
+teamInviteSchema.index({
+  teamId: 1,
+  role: 1,
+  active: 1,
+  expiresAt: 1,
+});
 
-export const Invite = mongoose.model<IInvite>('Invite', InviteSchema);
+export const Invite = model<ITeamInvite>('Invite', teamInviteSchema);

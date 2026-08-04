@@ -63,7 +63,7 @@ export const getRoster = async (req: Request, res: Response) => {
       });
 
     return sendSuccess(res, StatusCodes.OK, modifiedMembers, 'Team roster fetched successfully');
-  } catch {
+  } catch (error) {
     return sendError(
       res,
       StatusCodes.INTERNAL_SERVER_ERROR,
@@ -81,8 +81,6 @@ export const getRosterCount = async (req: AuthRequest, res: Response) => {
 
   try {
     const count = await getTeamMembersCount(new mongoose.Types.ObjectId(teamId));
-
-    console.log('Roster count:', count);
 
     return sendSuccess(res, StatusCodes.OK, { count }, 'Team roster count fetched successfully');
   } catch {
@@ -167,6 +165,7 @@ export const addPlayerToRoster = async (req: AuthRequest, res: Response) => {
 
     await session.commitTransaction();
     session.endSession();
+
 
     return sendSuccess(res, StatusCodes.OK, newMember, 'New team member added successfully');
   } catch (error) {
