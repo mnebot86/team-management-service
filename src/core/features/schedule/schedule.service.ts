@@ -125,9 +125,20 @@ const expandRecurringSchedules = (
       : rangeEnd;
 
     const currentDate = new Date(schedule.startDate);
+    const recurrenceFrequency = schedule.recurrence.frequency ?? 'weekly';
+    const recurrenceDays = schedule.recurrence.daysOfWeek?.length > 0
+      ? schedule.recurrence.daysOfWeek
+      : [currentDate.getDay()];
+    const recurrenceDayOfMonth = currentDate.getDate();
 
     while (currentDate <= effectiveEndDate) {
-      if (schedule.recurrence.daysOfWeek.includes(currentDate.getDay())) {
+      const isOccurrence = recurrenceFrequency === 'daily'
+        || (recurrenceFrequency === 'weekly'
+          && recurrenceDays.includes(currentDate.getDay()))
+        || (recurrenceFrequency === 'monthly'
+          && currentDate.getDate() === recurrenceDayOfMonth);
+
+      if (isOccurrence) {
         occurrences.push({
           scheduleId: schedule._id.toString(),
           title: schedule.title ?? '',
@@ -260,9 +271,12 @@ export const getLastPractice = async (
   });
 
   const now = new Date();
+  const endOfToday = new Date(now);
+
+  endOfToday.setHours(23, 59, 59, 999);
 
   const occurrences = expandRecurringSchedules(schedules)
-    .filter((occurrence) => occurrence.occurrenceStartDate <= now)
+    .filter((occurrence) => occurrence.occurrenceStartDate <= endOfToday)
     .sort(
       (a, b) =>
         b.occurrenceStartDate.getTime() - a.occurrenceStartDate.getTime(),
