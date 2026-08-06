@@ -1,11 +1,17 @@
-import { getSocket } from '../../socket';
+import { getSocketOrNull } from '../../socket';
 import { ITeam } from './team.types';
 
 export const emitTeamCreated = (
   userId: string,
   team: ITeam,
 ) => {
-  getSocket()
+  const socketServer = getSocketOrNull();
+
+  if (!socketServer) {
+    return;
+  }
+
+  socketServer
     .to(`user:${userId}`)
     .emit('team.created', team);
 };

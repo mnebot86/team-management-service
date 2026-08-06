@@ -1,7 +1,7 @@
 const ROLES = {
-  OWNER: 'owner',
   COACH: 'coach',
   PLAYER: 'player',
+  PARENT: 'parent',
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];

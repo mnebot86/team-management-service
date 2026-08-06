@@ -1,9 +1,9 @@
 import { Schema, model, Types, Document } from 'mongoose';
 
 export const TEAM_ROLES = {
-  OWNER: 'owner',
   COACH: 'coach',
   PLAYER: 'player',
+  PARENT: 'parent',
 } as const;
 
 export type TeamRole = typeof TEAM_ROLES[keyof typeof TEAM_ROLES];
@@ -34,7 +34,7 @@ const teamMemberSchema = new Schema<TeamMemberDocument>(
     },
     role: {
       type: String,
-      enum: ['owner', 'coach', 'player'],
+      enum: ['coach', 'player', 'parent'],
       required: true,
     },
     jerseyNumber: {

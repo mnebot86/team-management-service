@@ -7,7 +7,7 @@ import { getUserRoleInTeam } from '../features/team/team.permissions';
 import { AuthRequest } from '../features/team/team.types';
 
 export const requireTeamPermission = (
-  checker: (role: 'owner' | 'coach' | 'player') => boolean
+  checker: (role: 'coach' | 'player' | 'parent') => boolean
 ) => {
   return async (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user?.id) {

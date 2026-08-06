@@ -2,6 +2,8 @@ import mongoose, { Types } from 'mongoose';
 import { CreateTeamDto } from './team.dto';
 import { Team } from './team.model';
 import { Profile } from '../profile/profile.model';
+import { createProfileForUser } from '../profile/profile.service';
+import { createUserProfile } from '../userProfile/userProfile.service';
 import { addTeamMember, getTeamsForProfile } from '../teamMember/teamMember.service';
 
 export const createTeam = async (data: CreateTeamDto) => {
@@ -10,12 +12,26 @@ export const createTeam = async (data: CreateTeamDto) => {
     ownerId: new mongoose.Types.ObjectId(data.ownerId),
   });
 
-  // find profile for owner
-  const profile = await Profile.findOne({ createdByUserId: team.ownerId, isClaimed: true });
+  let profile = await Profile.findOne({ createdByUserId: team.ownerId, isClaimed: true });
 
-  if (profile) {
-    await addTeamMember(team._id as Types.ObjectId, profile._id as Types.ObjectId, 'owner');
+  if (!profile) {
+    profile = await createProfileForUser({
+      userId: team.ownerId,
+      firstName: 'User',
+    });
   }
+
+  const existingUserProfile = await Profile.findOne({ createdByUserId: team.ownerId, isClaimed: true });
+
+  if (!existingUserProfile) {
+    await createUserProfile({
+      userId: team.ownerId,
+      profileId: profile._id as Types.ObjectId,
+      role: 'coach',
+    });
+  }
+
+  await addTeamMember(team._id as Types.ObjectId, profile._id as Types.ObjectId, 'coach');
 
   return team;
 };

@@ -2,6 +2,7 @@ import request from 'supertest';
 import app from '../../../../app';
 import { Team } from '../team.model';
 import { User } from '../../user/user.model';
+import { TeamMember } from '../../teamMember/teamMember.modal';
 import { StatusCodes } from 'http-status-codes';
 import { connectDB } from '../../../../config/db';
 import mongoose from 'mongoose';
@@ -45,6 +46,18 @@ describe('Team API - Create Team', () => {
     expect(response.body.success).toBe(true);
     expect(response.body.data).toHaveProperty('_id');
     expect(response.body.data.name).toBe(testTeam.name);
+  });
+
+  it('should assign the creator as a coach when creating a team', async () => {
+    const response = await request(app)
+      .post('/api/v1/teams')
+      .set('Authorization', `Bearer ${token}`)
+      .send(testTeam);
+
+    const teamMember = await TeamMember.findOne({ teamId: response.body.data._id });
+
+    expect(teamMember).not.toBeNull();
+    expect(teamMember?.role).toBe('coach');
   });
 
   it('should not allow duplicate team creation', async () => {

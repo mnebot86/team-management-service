@@ -88,11 +88,19 @@ export const getSocket = (): Server => {
   return io;
 };
 
+export const getSocketOrNull = (): Server | null => io ?? null;
+
 export const joinProfileSocketsToTeam = async (
   profileId: string,
   teamId: string,
 ): Promise<void> => {
-  const sockets = await getSocket()
+  const socketServer = getSocketOrNull();
+
+  if (!socketServer) {
+    return;
+  }
+
+  const sockets = await socketServer
     .in(`profile:${profileId}`)
     .fetchSockets();
 

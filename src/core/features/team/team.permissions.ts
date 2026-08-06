@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-type Role = 'owner' | 'coach' | 'player';
+type Role = 'coach' | 'player' | 'parent';
 
 type TeamMember = {
   userId: mongoose.Types.ObjectId;
@@ -13,22 +13,18 @@ type TeamLike = {
 };
 
 export const canUpdateTeam = (role: Role) => {
-  return role === 'owner' || role === 'coach';
+  return role === 'coach';
 };
 
 export const canDeleteTeam = (role: Role) => {
-  return role === 'owner';
+  return role === 'coach';
 };
 
 export const canManageMembers = (role: Role) => {
-  return role === 'owner' || role === 'coach';
+  return role === 'coach';
 };
 
 export const getUserRoleInTeam = (team: TeamLike, userId: string): Role | null => {
-  if (team.ownerId.toString() === userId) {
-    return 'owner';
-  }
-
   const member = team.members?.find(
     (m: TeamMember) => m.userId.toString() === userId
   );

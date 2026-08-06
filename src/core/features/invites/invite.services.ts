@@ -160,7 +160,7 @@ export const joinTeamWithInviteCode = async ({
   const recipients = await TeamMember.find({
     teamId: invite.teamId,
     role: {
-      $in: [TEAM_ROLES.OWNER, TEAM_ROLES.COACH],
+      $in: [TEAM_ROLES.COACH],
     },
   }).select('profileId');
 

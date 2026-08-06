@@ -177,7 +177,7 @@ export const updateTeam = async (req: AuthRequest, res: Response) => {
     ...(sport ? { sport: sport.trim() } : {}),
   };
 
-  // TODO: Add permission check using TeamMember (owner/coach)
+  // TODO: Add permission check using TeamMember (coach)
 
   try {
     const updated = await teamService.updateTeam(teamId, updatePayload);
@@ -205,7 +205,7 @@ export const deleteTeam = async (req: AuthRequest, res: Response) => {
 
   const teamId = req.params.teamId as string;
 
-  // TODO: Add permission check using TeamMember (owner only)
+  // TODO: Add permission check using TeamMember (coach only)
 
   try {
     await teamService.deleteTeam(teamId);

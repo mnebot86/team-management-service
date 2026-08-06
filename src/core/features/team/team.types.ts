@@ -8,7 +8,7 @@ export interface ITeam {
   ownerId: Types.ObjectId;
   members?: {
     userId: Types.ObjectId;
-    role: 'owner' | 'coach' | 'player';
+    role: 'coach' | 'player' | 'parent';
   }[];
   active: boolean;
 }

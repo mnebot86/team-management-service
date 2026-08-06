@@ -30,7 +30,7 @@ export const addTeamMember = async (
   const recipients = await TeamMember.find({
     teamId,
     role: {
-      $in: [TEAM_ROLES.OWNER, TEAM_ROLES.COACH],
+      $in: [TEAM_ROLES.COACH],
     },
   }).select('profileId');
 
