@@ -52,9 +52,13 @@ export const addTeamMember = async (
 };
 
 export const getTeamMembers = async (
-  teamId: Types.ObjectId
+  teamId: Types.ObjectId,
+  role?: TeamRole,
 ): Promise<TeamMemberDocument[]> => {
-  return TeamMember.find({ teamId }).populate('profileId');
+  return TeamMember.find({
+    teamId,
+    ...(role ? { role } : {}),
+  }).populate('profileId');
 };
 
 export const getTeamMember = async (

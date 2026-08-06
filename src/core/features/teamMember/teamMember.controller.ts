@@ -13,16 +13,31 @@ import { uploadUserProfileImage } from '../imageUploader/imageUploader.service';
 import { createProfile, updateProfile } from '../profile/profile.service';
 import { sendError, sendSuccess } from '../../shared/utils/response';
 import { logger } from '../../shared/utils/logger';
+import { TEAM_ROLES, TeamRole } from './teamMember.modal';
 
 export const getRoster = async (req: Request, res: Response) => {
   const teamId = req.params.teamId as string;
+  const role = req.query.role;
 
   if (!mongoose.Types.ObjectId.isValid(teamId)) {
     return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Invalid team ID' });
   }
 
+  const validRoles = Object.values(TEAM_ROLES);
+
+  if (role !== undefined && (typeof role !== 'string' || !validRoles.includes(role as TeamRole))) {
+    return sendError(
+      res,
+      StatusCodes.BAD_REQUEST,
+      `Invalid role. Expected one of: ${validRoles.join(', ')}`,
+    );
+  }
+
   try {
-    const members = await getTeamMembers(new mongoose.Types.ObjectId(teamId));
+    const members = await getTeamMembers(
+      new mongoose.Types.ObjectId(teamId),
+      role as TeamRole | undefined,
+    );
 
     const modifiedMembers = members
       .map((member) => {
