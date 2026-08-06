@@ -81,6 +81,8 @@ interface ScheduleOccurrence {
   };
 }
 
+export type SchedulePeriod = 'upcoming' | 'past';
+
 const expandRecurringSchedules = (
   schedules: ScheduleDocument[],
 ): ScheduleOccurrence[] => {
@@ -173,6 +175,7 @@ const expandRecurringSchedules = (
 
 export const getTeamSchedule = async (
   teamId: Types.ObjectId,
+  period: SchedulePeriod = 'upcoming',
 ): Promise<ScheduleSection[]> => {
   const schedules = await Schedule.find({ teamId })
     .sort({ startDate: 1 });
@@ -181,9 +184,6 @@ export const getTeamSchedule = async (
 
   const now = new Date();
 
-  const startOfToday = new Date(now);
-  startOfToday.setHours(0, 0, 0, 0);
-
   const endOfToday = new Date(now);
   endOfToday.setHours(23, 59, 59, 999);
 
@@ -191,12 +191,25 @@ export const getTeamSchedule = async (
   endOfWeek.setDate(now.getDate() + (7 - now.getDay()));
   endOfWeek.setHours(23, 59, 59, 999);
 
+  if (period === 'past') {
+    const past = events
+      .filter((event) => event.occurrenceStartDate < now)
+      .sort(
+        (a, b) =>
+          b.occurrenceStartDate.getTime() - a.occurrenceStartDate.getTime(),
+      );
+
+    return past.length > 0
+      ? [{ title: 'Past', data: past }]
+      : [];
+  }
+
   const today = events.filter(event => {
     if (!event.startDate) return false;
 
     const eventDate = new Date(event.startDate);
 
-    return eventDate >= startOfToday && eventDate <= endOfToday;
+    return eventDate >= now && eventDate <= endOfToday;
   });
 
   const thisWeek = events.filter(event => {

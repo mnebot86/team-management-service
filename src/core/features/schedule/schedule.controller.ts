@@ -122,14 +122,27 @@ export const getTeamSchedule = async (
   res: Response,
 ): Promise<Response> => {
   const { teamId } = req.params;
+  const { period } = req.query;
 
   if (!teamId || !Types.ObjectId.isValid(teamId as string)) {
     return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid team ID');
   }
 
+  if (
+    period !== undefined
+    && (typeof period !== 'string' || !['upcoming', 'past'].includes(period))
+  ) {
+    return sendError(
+      res,
+      StatusCodes.BAD_REQUEST,
+      'Invalid period. Expected one of: upcoming, past',
+    );
+  }
+
   try {
     const schedule = await scheduleService.getTeamSchedule(
       new Types.ObjectId(teamId as string),
+      period as scheduleService.SchedulePeriod | undefined,
     );
 
     return sendSuccess(
