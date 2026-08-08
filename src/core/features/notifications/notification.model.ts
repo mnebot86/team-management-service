@@ -18,6 +18,10 @@ export const NOTIFICATION_TYPES = {
   INVITE_UPDATED: 'invite.updated',
 
   ANNOUNCEMENT_CREATED: 'announcement.created',
+
+  DEPT_CHART_CREATED: 'dept-chart.created',
+  DEPT_CHART_UPDATED: 'dept-chart.updated',
+  DEPT_CHART_DELETED: 'dept-chart.deleted',
 } as const;
 
 export type NotificationType =

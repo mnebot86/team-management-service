@@ -13,6 +13,7 @@ import profileRoutes from './core/features/profile/profile.routers';
 import scheduleRoutes from './core/features/schedule/schedule.router';
 import practiceRoutes from './core/features/practice/practice.routers';
 import notificationRoutes from './core/features/notifications/notification.routers';
+import deptChartRoutes from './core/features/deptChart/deptChart.routers';
 
 // middleware
 import { errorMiddleware } from './core/middleware/error.middleware';
@@ -50,6 +51,7 @@ app.use('/api/v1/profiles', protect, profileRoutes);
 app.use('/api/v1/schedules', protect, scheduleRoutes);
 app.use('/api/v1/practices', protect, practiceRoutes);
 app.use('/api/v1/notifications', protect, notificationRoutes);
+app.use('/api/v1/dept-charts', protect, deptChartRoutes);
 
 // error handler (must be last)
 app.use(errorMiddleware);
