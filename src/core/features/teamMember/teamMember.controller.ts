@@ -14,6 +14,42 @@ import { createProfile, updateProfile } from '../profile/profile.service';
 import { sendError, sendSuccess } from '../../shared/utils/response';
 import { logger } from '../../shared/utils/logger';
 import { TEAM_ROLES, TeamRole } from './teamMember.modal';
+import { Team } from '../team/team.model';
+import {
+  getPositionDefinition,
+  resolvePositionIds,
+  UnsupportedSportError,
+} from '../sports/sport.registry';
+
+const parsePositionValues = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string');
+  }
+
+  if (typeof value !== 'string' || !value.trim()) {
+    return [];
+  }
+
+  if (value.trim().startsWith('[')) {
+    const parsed: unknown = JSON.parse(value);
+
+    if (!Array.isArray(parsed) || parsed.some((item) => typeof item !== 'string')) {
+      throw new Error('Positions must be an array of strings.');
+    }
+
+    return parsed;
+  }
+
+  return value.split(',').map((item) => item.trim()).filter(Boolean);
+};
+
+const getPositionLabels = (
+  sportId: string,
+  sportVariantId: string,
+  positionIds: string[],
+) => positionIds.map(
+  (positionId) => getPositionDefinition(sportId, sportVariantId, positionId)?.name,
+).filter((name): name is string => Boolean(name));
 
 export const getRoster = async (req: Request, res: Response) => {
   const teamId = req.params.teamId as string;
@@ -34,6 +70,12 @@ export const getRoster = async (req: Request, res: Response) => {
   }
 
   try {
+    const team = await Team.findById(teamId).select('sportId sportVariantId');
+
+    if (!team) {
+      return sendError(res, StatusCodes.NOT_FOUND, 'Team not found');
+    }
+
     const members = await getTeamMembers(
       new mongoose.Types.ObjectId(teamId),
       role as TeamRole | undefined,
@@ -53,6 +95,15 @@ export const getRoster = async (req: Request, res: Response) => {
           };
         };
 
+        const positionIds = member.positionIds ?? [];
+        const positionLabels = positionIds.length > 0
+          ? getPositionLabels(
+            team.sportId ?? 'football',
+            team.sportVariantId ?? 'tackle-11',
+            positionIds,
+          )
+          : member.positions ?? [];
+
         return {
           profileId: profile._id,
           firstName: profile.firstName,
@@ -62,7 +113,8 @@ export const getRoster = async (req: Request, res: Response) => {
           linkCode: profile.linkCode,
           imageUrl: profile.avatar?.url || null,
           jerseyNumber: member.jerseyNumber,
-          positions: member.positions,
+          positionIds,
+          positions: positionLabels,
           createdAt: member.createdAt,
           updatedAt: member.updatedAt,
         };
@@ -181,7 +233,6 @@ export const addPlayerToRoster = async (req: AuthRequest, res: Response) => {
     await session.commitTransaction();
     session.endSession();
 
-
     return sendSuccess(res, StatusCodes.OK, newMember, 'New team member added successfully');
   } catch (error) {
     logger.error({ err: error }, 'Error adding player to roster');
@@ -213,12 +264,21 @@ export const getTeamMember = async (req: AuthRequest, res: Response) => {
       return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Team member not found' });
     }
 
+    const team = await Team.findById(teamId).select('sportId sportVariantId');
+    const positionIds = member.positionIds ?? [];
     const modifiedMember = {
       firstName: (member.profileId as any).firstName,
       lastName: (member.profileId as any).lastName,
       role: member.role,
       jerseyNumber: member.jerseyNumber,
-      positions: member.positions,
+      positionIds,
+      positions: team && positionIds.length > 0
+        ? getPositionLabels(
+          team.sportId ?? 'football',
+          team.sportVariantId ?? 'tackle-11',
+          positionIds,
+        )
+        : member.positions,
       avatar: (member.profileId as any).avatar?.url || null,
       avatarPublicId: (member.profileId as any).avatar?.publicId || null,
       isClaimed: (member.profileId as any).isClaimed,
@@ -239,16 +299,24 @@ export const getTeamMember = async (req: AuthRequest, res: Response) => {
 };
 
 export const editTeamMember = async (req: AuthRequest, res: Response) => {
-  const { profileId } = req.params;
+  const { teamId, profileId } = req.params;
 
-  if (!profileId || Array.isArray(profileId) || !mongoose.Types.ObjectId.isValid(profileId)) {
-    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid profile ID');
+  if (
+    !teamId
+    || Array.isArray(teamId)
+    || !mongoose.Types.ObjectId.isValid(teamId)
+    || !profileId
+    || Array.isArray(profileId)
+    || !mongoose.Types.ObjectId.isValid(profileId)
+  ) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid team or profile ID');
   }
 
   const {
     firstName,
     lastName,
     positions,
+    positionIds,
     jerseyNumber,
     avatarPublicId,
   } = req.body;
@@ -279,18 +347,37 @@ export const editTeamMember = async (req: AuthRequest, res: Response) => {
       };
     }
 
-    const positionsArray = positions.split(',').map((pos: string) => pos.trim());
+    const team = await Team.findById(teamId).select('sportId sportVariantId');
 
-    const teamMemberPayload = {
-      positions: positionsArray,
-      jerseyNumber,
+    if (!team) {
+      return sendError(res, StatusCodes.NOT_FOUND, 'Team not found');
     }
 
+    const resolvedPositionIds = resolvePositionIds(
+      team.sportId ?? 'football',
+      team.sportVariantId ?? 'tackle-11',
+      parsePositionValues(positionIds ?? positions),
+    );
+    const teamMemberPayload = {
+      positionIds: resolvedPositionIds,
+      positions: getPositionLabels(
+        team.sportId ?? 'football',
+        team.sportVariantId ?? 'tackle-11',
+        resolvedPositionIds,
+      ),
+      jerseyNumber,
+    };
+
+    const objectTeamId = new Types.ObjectId(teamId);
     const objectProfileId = new Types.ObjectId(profileId);
 
     await updateProfile(objectProfileId, profilePayload);
 
-    const editedTeamMember = await updateTeamMember(objectProfileId, teamMemberPayload);
+    const editedTeamMember = await updateTeamMember(
+      objectTeamId,
+      objectProfileId,
+      teamMemberPayload,
+    );
 
     return sendSuccess(res, StatusCodes.OK, editedTeamMember, 'Team member updated successfully');
   } catch (error) {
@@ -298,8 +385,12 @@ export const editTeamMember = async (req: AuthRequest, res: Response) => {
 
     return sendError(
       res,
-      StatusCodes.INTERNAL_SERVER_ERROR,
-      'An error occurred while editing the team member'
+      error instanceof UnsupportedSportError
+        ? StatusCodes.BAD_REQUEST
+        : StatusCodes.INTERNAL_SERVER_ERROR,
+      error instanceof Error
+        ? error.message
+        : 'An error occurred while editing the team member',
     );
   }
 };

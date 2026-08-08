@@ -14,6 +14,7 @@ export interface TeamMemberDocument extends Document {
   role: TeamRole;
   jerseyNumber?: string;
   positions?: string[];
+  positionIds?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,7 +45,12 @@ const teamMemberSchema = new Schema<TeamMemberDocument>(
     positions: {
       type: [String],
       required: false,
-    }
+    },
+    positionIds: {
+      type: [String],
+      required: false,
+      default: [],
+    },
   },
   {
     timestamps: true,

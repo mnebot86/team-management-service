@@ -17,6 +17,19 @@ const teamSchema = new Schema<ITeam>(
       default: 'football',
       trim: true,
     },
+    sportId: {
+      type: String,
+      required: true,
+      default: 'football',
+      trim: true,
+      index: true,
+    },
+    sportVariantId: {
+      type: String,
+      required: true,
+      default: 'tackle-11',
+      trim: true,
+    },
     ownerId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
@@ -33,7 +46,7 @@ const teamSchema = new Schema<ITeam>(
 );
 
 teamSchema.index(
-  { name: 1, ageGroup: 1, sport: 1 },
+  { name: 1, ageGroup: 1, sportId: 1, sportVariantId: 1 },
   { unique: true }
 );
 

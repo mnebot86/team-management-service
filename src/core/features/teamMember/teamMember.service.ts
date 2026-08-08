@@ -116,6 +116,10 @@ export const getTeamMemberById = async (
   return TeamMember.findOne({ teamId, profileId }).populate('profileId');
 };
 
-export const updateTeamMember = async (profileId: Types.ObjectId, updateData: Partial<TeamMemberDocument>): Promise<TeamMemberDocument | null> => {
-  return TeamMember.findOneAndUpdate({ profileId }, updateData, { new: true });
+export const updateTeamMember = async (
+  teamId: Types.ObjectId,
+  profileId: Types.ObjectId,
+  updateData: Partial<TeamMemberDocument>,
+): Promise<TeamMemberDocument | null> => {
+  return TeamMember.findOneAndUpdate({ teamId, profileId }, updateData, { new: true });
 }

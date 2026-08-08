@@ -6,6 +6,7 @@ export interface CreateDeptChartInput {
   teamId: string;
   name: string;
   positions?: {
+    positionDefinitionId?: string;
     name: string;
     shortName?: string;
     sortOrder?: number;
@@ -18,6 +19,7 @@ export interface CreateDeptChartInput {
 }
 
 interface DeptChartPositionInput {
+  positionDefinitionId?: string;
   name: string;
   shortName?: string;
   sortOrder?: number;
@@ -40,7 +42,36 @@ export interface UpdateDeptChartInput {
   removePlayers?: Omit<DeptChartPlayerChange, 'depth'>[];
 }
 
-export class DeptChartPositionNotFoundError extends Error {}
+export class DeptChartPositionNotFoundError extends Error { }
+
+const chartOrder = [
+  'Offense',
+  'Defense',
+  'Kick Off',
+  'Kick Receiving',
+  'Punt',
+  'Field Goal',
+  'Field Goal Block',
+];
+
+const sortDeptCharts = <T extends { name: string }>(charts: T[]) => [...charts].sort((a, b) => {
+  const indexA = chartOrder.indexOf(a.name);
+  const indexB = chartOrder.indexOf(b.name);
+
+  if (indexA !== -1 && indexB !== -1) {
+    return indexA - indexB;
+  }
+
+  if (indexA !== -1) {
+    return -1;
+  }
+
+  if (indexB !== -1) {
+    return 1;
+  }
+
+  return a.name.localeCompare(b.name);
+});
 
 export const createDeptChart = async (input: CreateDeptChartInput) => {
   return DeptChart.create({
@@ -58,17 +89,19 @@ export const getDeptChartFilters = async (
     teamId: new Types.ObjectId(teamId),
   });
 
-  return names.sort((a, b) => a.localeCompare(b));
+  return sortDeptCharts(names.map((name) => ({ name }))).map(({ name }) => name);
 };
 
 export const getDeptCharts = async (
   teamId: string,
   name?: string,
 ) => {
-  return DeptChart.find({
+  const charts = await DeptChart.find({
     teamId: new Types.ObjectId(teamId),
     ...(name ? { name } : {}),
-  }).sort({ name: 1, createdAt: -1 });
+  }).sort({ createdAt: -1 });
+
+  return sortDeptCharts(charts);
 };
 
 export const updateDeptChart = async (
@@ -86,7 +119,22 @@ export const updateDeptChart = async (
   }
 
   if (input.positions !== undefined) {
-    deptChart.set('positions', input.positions);
+    const existingPositions = [...deptChart.positions];
+
+    deptChart.set(
+      'positions',
+      input.positions.map((position, index) => {
+        const existingDefinitionId = existingPositions[index]
+          ?.positionDefinitionId;
+        const positionDefinitionId = position.positionDefinitionId
+          ?? existingDefinitionId;
+
+        return {
+          ...position,
+          ...(positionDefinitionId ? { positionDefinitionId } : {}),
+        };
+      }),
+    );
   }
 
   for (const player of input.addPlayers ?? []) {

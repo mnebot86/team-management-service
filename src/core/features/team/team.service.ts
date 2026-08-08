@@ -2,9 +2,12 @@ import mongoose, { Types } from 'mongoose';
 import { CreateTeamDto } from './team.dto';
 import { Team } from './team.model';
 import { Profile } from '../profile/profile.model';
+import type { ProfileDocument } from '../profile/profile.model';
 import { createProfileForUser } from '../profile/profile.service';
 import { createUserProfile } from '../userProfile/userProfile.service';
+import { UserProfile } from '../userProfile/userProfile.model';
 import { addTeamMember, getTeamsForProfile } from '../teamMember/teamMember.service';
+import { bootstrapTeamSport } from '../sports/sport.bootstrap';
 
 export const createTeam = async (data: CreateTeamDto) => {
   const team = await Team.create({
@@ -12,7 +15,10 @@ export const createTeam = async (data: CreateTeamDto) => {
     ownerId: new mongoose.Types.ObjectId(data.ownerId),
   });
 
-  let profile = await Profile.findOne({ createdByUserId: team.ownerId, isClaimed: true });
+  let profile = await Profile.findOne({
+    createdByUserId: team.ownerId,
+    isClaimed: true,
+  }) as ProfileDocument | null;
 
   if (!profile) {
     profile = await createProfileForUser({
@@ -21,7 +27,7 @@ export const createTeam = async (data: CreateTeamDto) => {
     });
   }
 
-  const existingUserProfile = await Profile.findOne({ createdByUserId: team.ownerId, isClaimed: true });
+  const existingUserProfile = await UserProfile.findOne({ userId: team.ownerId });
 
   if (!existingUserProfile) {
     await createUserProfile({
@@ -32,6 +38,13 @@ export const createTeam = async (data: CreateTeamDto) => {
   }
 
   await addTeamMember(team._id as Types.ObjectId, profile._id as Types.ObjectId, 'coach');
+
+  await bootstrapTeamSport(
+    team._id as Types.ObjectId,
+    profile._id as Types.ObjectId,
+    team.sportId,
+    team.sportVariantId,
+  );
 
   return team;
 };

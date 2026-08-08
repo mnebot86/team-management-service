@@ -5,6 +5,8 @@ export interface ITeam {
   name: string;
   ageGroup?: string;
   sport?: string;
+  sportId: string;
+  sportVariantId: string;
   ownerId: Types.ObjectId;
   members?: {
     userId: Types.ObjectId;

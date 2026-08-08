@@ -21,6 +21,12 @@ const playerSchema = new Schema(
 
 const positionSchema = new Schema(
   {
+    positionDefinitionId: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
     name: {
       type: String,
       required: true,

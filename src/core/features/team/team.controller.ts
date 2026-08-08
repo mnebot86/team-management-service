@@ -10,11 +10,16 @@ import { CreateTeamDto } from './team.dto';
 import { MONGO_ERRORS } from '../../constants/mongoErrors';
 import { AuthRequest } from './team.types';
 import { emitTeamCreated } from './team.emitter';
+import {
+  getSport,
+  getSportVariant,
+  UnsupportedSportError,
+} from '../sports/sport.registry';
 
 export const createTeam = async (req: AuthRequest, res: Response) => {
   const payload: CreateTeamDto = req.body;
 
-  const { name, ageGroup, sport } = payload;
+  const { name, ageGroup, sport, sportId, sportVariantId } = payload;
 
   if (!name) {
     return sendError(
@@ -32,12 +37,22 @@ export const createTeam = async (req: AuthRequest, res: Response) => {
     );
   }
 
-  if (!sport) {
+  const normalizedSportId = (sportId || sport || '').trim().toLowerCase();
+  const sportDefinition = getSport(normalizedSportId);
+
+  if (!sportDefinition) {
     return sendError(
       res,
       StatusCodes.BAD_REQUEST,
-      'Sport is required',
+      'A supported sport is required',
     );
+  }
+
+  const normalizedVariantId = sportVariantId?.trim()
+    || sportDefinition.defaultVariantId;
+
+  if (!getSportVariant(sportDefinition.id, normalizedVariantId)) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'Unsupported sport variant');
   }
 
   if (!req.user?.id) {
@@ -47,7 +62,9 @@ export const createTeam = async (req: AuthRequest, res: Response) => {
   const sanitizedPayload: CreateTeamDto = {
     name: name.trim(),
     ageGroup: ageGroup.trim(),
-    sport: sport.trim(),
+    sport: sportDefinition.name,
+    sportId: sportDefinition.id,
+    sportVariantId: normalizedVariantId,
     ownerId: new mongoose.Types.ObjectId(req.user.id),
   };
 
@@ -66,6 +83,10 @@ export const createTeam = async (req: AuthRequest, res: Response) => {
         StatusCodes.CONFLICT,
         'A team with the same name, age group, and sport already exists'
       );
+    }
+
+    if (error instanceof UnsupportedSportError) {
+      return sendError(res, StatusCodes.BAD_REQUEST, error.message);
     }
 
     return sendError(res, StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to create team', error);
@@ -165,16 +186,29 @@ export const updateTeam = async (req: AuthRequest, res: Response) => {
 
   const teamId = req.params.teamId as string;
 
-  const { name, ageGroup, sport } = req.body as Partial<CreateTeamDto>;
+  const {
+    name,
+    ageGroup,
+    sport,
+    sportId,
+    sportVariantId,
+  } = req.body as Partial<CreateTeamDto>;
 
-  if (!name && !ageGroup && !sport) {
+  if (sport || sportId || sportVariantId) {
+    return sendError(
+      res,
+      StatusCodes.BAD_REQUEST,
+      'Team sport configuration cannot be changed after creation',
+    );
+  }
+
+  if (!name && !ageGroup) {
     return sendError(res, StatusCodes.BAD_REQUEST, 'At least one field is required to update');
   }
 
   const updatePayload: Partial<CreateTeamDto> = {
     ...(name ? { name: name.trim() } : {}),
     ...(ageGroup ? { ageGroup: ageGroup.trim() } : {}),
-    ...(sport ? { sport: sport.trim() } : {}),
   };
 
   // TODO: Add permission check using TeamMember (coach)
