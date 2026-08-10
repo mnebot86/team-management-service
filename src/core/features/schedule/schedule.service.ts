@@ -71,7 +71,7 @@ interface ScheduleOccurrence {
   startTime?: Date | null;
   endTime?: Date | null;
   occurrenceStartDate: Date;
-  attendance?: ScheduleDocument['attendance'];
+  attendance?: ScheduleDocument['attendance'] | undefined;
   location: {
     name?: string;
     street?: string;
@@ -111,7 +111,7 @@ const expandRecurringSchedules = (
             .millisecond(0)
             .toDate()
           : schedule.startDate,
-        attendance: schedule.attendance,
+        attendance: undefined,
         location: schedule.location,
       });
 
@@ -159,7 +159,7 @@ const expandRecurringSchedules = (
               .millisecond(0)
               .toDate()
             : new Date(currentDate),
-          attendance: schedule.attendance,
+          attendance: undefined,
           location: schedule.location,
         });
       }
@@ -204,26 +204,20 @@ export const getTeamSchedule = async (
       : [];
   }
 
-  const today = events.filter(event => {
-    if (!event.startDate) return false;
-
-    const eventDate = new Date(event.startDate);
+  const today = events.filter((event) => {
+    const eventDate = event.occurrenceStartDate;
 
     return eventDate >= now && eventDate <= endOfToday;
   });
 
-  const thisWeek = events.filter(event => {
-    if (!event.startDate) return false;
-
-    const eventDate = new Date(event.startDate);
+  const thisWeek = events.filter((event) => {
+    const eventDate = event.occurrenceStartDate;
 
     return eventDate > endOfToday && eventDate <= endOfWeek;
   });
 
   const upcoming = events.filter((event) => {
-    if (!event.startDate) return false;
-
-    const eventDate = new Date(event.startDate);
+    const eventDate = event.occurrenceStartDate;
 
     return eventDate > endOfWeek;
   });
