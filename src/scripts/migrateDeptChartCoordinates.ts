@@ -52,7 +52,7 @@ const migrate = async (): Promise<void> => {
         return;
       }
 
-      position.coordinates = template?.coordinates[index]
+      position.coordinates = template?.coordinates?.[index]
         ?? fallbackCoordinates(index, chart.positions.length);
       changed = true;
       updatedPositions += 1;

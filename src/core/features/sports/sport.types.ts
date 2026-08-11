@@ -10,12 +10,19 @@ export interface SportDepthChartTemplate {
   name: string;
   sortOrder: number;
   positionIds: string[];
+  coordinates?: FormationCoordinates[];
+}
+
+export interface FormationCoordinates {
+  x: number;
+  y: number;
 }
 
 export interface SportFormationDefinition {
   id: string;
   name: string;
   positionIds: string[];
+  coordinates?: FormationCoordinates[];
 }
 
 export interface SportVariantDefinition {
