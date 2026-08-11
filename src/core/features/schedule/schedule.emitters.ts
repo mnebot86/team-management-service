@@ -22,8 +22,10 @@ export const emitScheduleUpdated = (
 export const emitScheduleDeleted = (
   teamId: string,
   scheduleId: string,
+  scope: 'occurrence' | 'series' = 'occurrence',
+  recurrenceGroupId?: string,
 ): void => {
   getSocket()
     .to(`team:${teamId}`)
-    .emit('schedule.deleted', { scheduleId });
+    .emit('schedule.deleted', { scheduleId, scope, recurrenceGroupId });
 };

@@ -30,10 +30,34 @@ interface CreateScheduleInput {
   createdByUserId: Types.ObjectId;
 }
 
+export interface UpdateScheduleInput {
+  title?: string;
+  description?: string;
+  type?: string;
+  opponentName?: string | null;
+  isHomeGame?: boolean | null;
+  startDate?: Date | string;
+  startTime?: Date | string | null;
+  endTime?: Date | string | null;
+  location?: {
+    name?: string;
+    street?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+  };
+  recurrence?: {
+    isRecurring?: boolean;
+    frequency?: string | null;
+    daysOfWeek?: number[];
+    endDate?: Date | string | null;
+  };
+}
+
 export const createSchedule = async (
   input: CreateScheduleInput,
 ): Promise<ScheduleDocument> => {
-  return Schedule.create({
+  const baseSchedule = {
     teamId: input.teamId,
     title: input.title,
     description: input.description,
@@ -49,11 +73,260 @@ export const createSchedule = async (
       frequency: input.recurrence?.frequency ?? null,
       daysOfWeek: input.recurrence?.daysOfWeek ?? [],
       endDate: input.recurrence?.endDate ?? null,
+      cancelledDates: [],
+      occurrenceOverrides: [],
     },
     createdByUserId: input.createdByUserId,
+  };
+
+  if (!input.recurrence?.isRecurring) {
+    return Schedule.create(baseSchedule);
+  }
+
+  const recurrenceGroupId = new Types.ObjectId();
+  const rangeEnd = input.recurrence.endDate
+    ? new Date(input.recurrence.endDate)
+    : dayjs(input.startDate).add(90, 'day').toDate();
+  const currentDate = new Date(input.startDate);
+  const frequency = input.recurrence.frequency ?? 'weekly';
+  const daysOfWeek = input.recurrence.daysOfWeek?.length
+    ? input.recurrence.daysOfWeek
+    : [currentDate.getDay()];
+  const dayOfMonth = currentDate.getDate();
+  const occurrences: (typeof baseSchedule & {
+    recurrenceGroupId: Types.ObjectId;
+    startDate: Date;
+  })[] = [];
+
+  while (currentDate <= rangeEnd) {
+    const matches = frequency === 'daily'
+      || (frequency === 'weekly' && daysOfWeek.includes(currentDate.getDay()))
+      || (frequency === 'monthly' && currentDate.getDate() === dayOfMonth);
+
+    if (matches) {
+      occurrences.push({
+        ...baseSchedule,
+        recurrenceGroupId,
+        startDate: new Date(currentDate),
+      });
+    }
+
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  const createdSchedules = await Schedule.insertMany(occurrences);
+  const firstSchedule = createdSchedules[0];
+
+  if (!firstSchedule) {
+    throw new Error('Recurring schedule did not generate any occurrences');
+  }
+
+  return firstSchedule as ScheduleDocument;
+};
+
+export const updateSchedule = async (
+  scheduleId: Types.ObjectId,
+  input: UpdateScheduleInput,
+  occurrenceDate?: Date,
+  updatedByUserId?: Types.ObjectId,
+  updateSeries = false,
+): Promise<ScheduleDocument | null> => {
+  const target = await Schedule.findById(scheduleId);
+
+  if (!target) {
+    return null;
+  }
+
+  if (occurrenceDate && updatedByUserId) {
+    if (target.recurrenceGroupId) {
+      return updateScheduleDocument(scheduleId, input);
+    }
+
+    const changes = { ...input };
+    delete changes.recurrence;
+
+    return Schedule.findByIdAndUpdate(
+      scheduleId,
+      {
+        $push: {
+          'recurrence.occurrenceOverrides': {
+            occurrenceDate,
+            isCancelled: false,
+            cancellationReason: null,
+            changes,
+            updatedByUserId,
+            updatedAt: new Date(),
+          },
+        },
+      },
+      { new: true, runValidators: true },
+    );
+  }
+
+  if (updateSeries && target.recurrenceGroupId) {
+    const update = buildScheduleUpdate(input);
+    await Schedule.updateMany(
+      { recurrenceGroupId: target.recurrenceGroupId },
+      update,
+      { runValidators: true },
+    );
+
+    return Schedule.findById(scheduleId);
+  }
+
+  return updateScheduleDocument(scheduleId, input);
+};
+
+const buildScheduleUpdate = (
+  input: UpdateScheduleInput,
+): Record<string, unknown> => {
+  const update: Record<string, unknown> = {};
+
+  const scalarFields: (keyof Omit<UpdateScheduleInput, 'location' | 'recurrence'>)[] = [
+    'title',
+    'description',
+    'type',
+    'opponentName',
+    'isHomeGame',
+    'startDate',
+    'startTime',
+    'endTime',
+  ];
+
+  scalarFields.forEach((field) => {
+    if (input[field] !== undefined) {
+      update[field] = input[field];
+    }
+  });
+
+  Object.entries(input.location ?? {}).forEach(([field, value]) => {
+    if (value !== undefined) {
+      update[`location.${field}`] = value;
+    }
+  });
+
+  Object.entries(input.recurrence ?? {}).forEach(([field, value]) => {
+    if (value !== undefined) {
+      update[`recurrence.${field}`] = value;
+    }
+  });
+
+  return update;
+};
+
+const updateScheduleDocument = (
+  scheduleId: Types.ObjectId,
+  input: UpdateScheduleInput,
+): Promise<ScheduleDocument | null> => {
+  return Schedule.findByIdAndUpdate(scheduleId, buildScheduleUpdate(input), {
+    new: true,
+    runValidators: true,
   });
 };
 
+export const cancelSchedule = async (
+  scheduleId: Types.ObjectId,
+  cancelledByUserId: Types.ObjectId,
+  reason?: string,
+  occurrenceDate?: Date,
+  cancelSeries = false,
+): Promise<ScheduleDocument | null> => {
+  const target = await Schedule.findById(scheduleId);
+
+  if (!target) {
+    return null;
+  }
+
+  if (occurrenceDate) {
+    if (target.recurrenceGroupId) {
+      return Schedule.findByIdAndUpdate(
+        scheduleId,
+        {
+          status: 'cancelled',
+          cancellationReason: reason?.trim() || null,
+          cancelledAt: new Date(),
+          cancelledByUserId,
+        },
+        { new: true, runValidators: true },
+      );
+    }
+
+    return Schedule.findByIdAndUpdate(
+      scheduleId,
+      {
+        $set: {
+          status: 'scheduled',
+          cancellationReason: null,
+          cancelledAt: null,
+          cancelledByUserId: null,
+        },
+        $addToSet: { 'recurrence.cancelledDates': occurrenceDate },
+        $push: {
+          'recurrence.occurrenceOverrides': {
+            occurrenceDate,
+            isCancelled: true,
+            cancellationReason: reason?.trim() || null,
+            changes: {},
+            updatedByUserId: cancelledByUserId,
+            updatedAt: new Date(),
+          },
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+  }
+
+  if (cancelSeries && target.recurrenceGroupId) {
+    await Schedule.updateMany(
+      { recurrenceGroupId: target.recurrenceGroupId },
+      {
+        status: 'cancelled',
+        cancellationReason: reason?.trim() || null,
+        cancelledAt: new Date(),
+        cancelledByUserId,
+      },
+      { runValidators: true },
+    );
+
+    return Schedule.findById(scheduleId);
+  }
+
+  return Schedule.findByIdAndUpdate(
+    scheduleId,
+    {
+      status: 'cancelled',
+      cancellationReason: reason?.trim() || null,
+      cancelledAt: new Date(),
+      cancelledByUserId,
+    },
+    {
+      new: true,
+      runValidators: true,
+    },
+  );
+};
+
+export const deleteSchedule = async (
+  scheduleId: Types.ObjectId,
+  deleteSeries = false,
+): Promise<ScheduleDocument | null> => {
+  const target = await Schedule.findById(scheduleId);
+
+  if (!target) {
+    return null;
+  }
+
+  if (deleteSeries && target.recurrenceGroupId) {
+    await Schedule.deleteMany({ recurrenceGroupId: target.recurrenceGroupId });
+  } else {
+    await Schedule.findByIdAndDelete(scheduleId);
+  }
+
+  return target;
+};
 
 interface ScheduleSection {
   title: string;
@@ -62,6 +335,7 @@ interface ScheduleSection {
 
 interface ScheduleOccurrence {
   scheduleId: string;
+  recurrenceDate: Date;
   title: string;
   description?: string;
   type: string;
@@ -71,6 +345,8 @@ interface ScheduleOccurrence {
   startTime?: Date | null;
   endTime?: Date | null;
   occurrenceStartDate: Date;
+  status: 'scheduled' | 'cancelled';
+  cancellationReason?: string | null;
   attendance?: ScheduleDocument['attendance'] | undefined;
   location: {
     name?: string;
@@ -92,9 +368,10 @@ const expandRecurringSchedules = (
   rangeEnd.setDate(rangeEnd.getDate() + 90);
 
   schedules.forEach((schedule) => {
-    if (!schedule.recurrence?.isRecurring) {
+    if (!schedule.recurrence?.isRecurring || schedule.recurrenceGroupId) {
       occurrences.push({
         scheduleId: schedule._id.toString(),
+        recurrenceDate: schedule.startDate,
         title: schedule.title ?? '',
         description: schedule.description,
         type: schedule.type ?? '',
@@ -111,6 +388,8 @@ const expandRecurringSchedules = (
             .millisecond(0)
             .toDate()
           : schedule.startDate,
+        status: schedule.status ?? 'scheduled',
+        cancellationReason: schedule.cancellationReason ?? null,
         attendance: undefined,
         location: schedule.location,
       });
@@ -132,6 +411,16 @@ const expandRecurringSchedules = (
       ? schedule.recurrence.daysOfWeek
       : [currentDate.getDay()];
     const recurrenceDayOfMonth = currentDate.getDate();
+    const cancelledDateKeys = new Set(
+      (schedule.recurrence.cancelledDates ?? []).map((date) =>
+        dayjs(date).format('YYYY-MM-DD'),
+      ),
+    );
+    const overridesByDate = new Map<string, ScheduleDocument['recurrence']['occurrenceOverrides'][number]>();
+
+    (schedule.recurrence.occurrenceOverrides ?? []).forEach((override) => {
+      overridesByDate.set(dayjs(override.occurrenceDate).format('YYYY-MM-DD'), override);
+    });
 
     while (currentDate <= effectiveEndDate) {
       const isOccurrence = recurrenceFrequency === 'daily'
@@ -141,26 +430,52 @@ const expandRecurringSchedules = (
           && currentDate.getDate() === recurrenceDayOfMonth);
 
       if (isOccurrence) {
+        const occurrenceKey = dayjs(currentDate).format('YYYY-MM-DD');
+        const override = overridesByDate.get(occurrenceKey);
+        const changes = override?.changes ?? {};
+        const occurrenceDate = changes.startDate
+          ? new Date(changes.startDate as Date | string)
+          : new Date(currentDate);
+        const occurrenceTime = changes.startTime !== undefined
+          ? changes.startTime as Date | string | null
+          : schedule.startTime;
+        const isCancelled = Boolean(override?.isCancelled)
+          || cancelledDateKeys.has(occurrenceKey);
+
         occurrences.push({
           scheduleId: schedule._id.toString(),
-          title: schedule.title ?? '',
-          description: schedule.description,
-          type: schedule.type ?? '',
-          opponentName: schedule.opponentName,
-          isHomeGame: schedule.isHomeGame,
-          startDate: new Date(currentDate),
-          startTime: schedule.startTime,
-          endTime: schedule.endTime,
-          occurrenceStartDate: schedule.startTime
-            ? dayjs(currentDate)
-              .hour(dayjs(schedule.startTime).hour())
-              .minute(dayjs(schedule.startTime).minute())
+          recurrenceDate: new Date(currentDate),
+          title: (changes.title as string | undefined) ?? schedule.title ?? '',
+          description: (changes.description as string | undefined) ?? schedule.description,
+          type: (changes.type as string | undefined) ?? schedule.type ?? '',
+          opponentName: changes.opponentName !== undefined
+            ? changes.opponentName as string | null
+            : schedule.opponentName,
+          isHomeGame: changes.isHomeGame !== undefined
+            ? changes.isHomeGame as boolean | null
+            : schedule.isHomeGame,
+          startDate: occurrenceDate,
+          startTime: occurrenceTime ? new Date(occurrenceTime) : null,
+          endTime: changes.endTime !== undefined
+            ? (changes.endTime ? new Date(changes.endTime as Date | string) : null)
+            : schedule.endTime,
+          occurrenceStartDate: occurrenceTime
+            ? dayjs(occurrenceDate)
+              .hour(dayjs(occurrenceTime).hour())
+              .minute(dayjs(occurrenceTime).minute())
               .second(0)
               .millisecond(0)
               .toDate()
-            : new Date(currentDate),
+            : occurrenceDate,
+          status: isCancelled ? 'cancelled' : (schedule.status ?? 'scheduled'),
+          cancellationReason: isCancelled
+            ? (override?.cancellationReason ?? null)
+            : (schedule.cancellationReason ?? null),
           attendance: undefined,
-          location: schedule.location,
+          location: {
+            ...schedule.location,
+            ...((changes.location as UpdateScheduleInput['location']) ?? {}),
+          },
         });
       }
 
@@ -244,13 +559,13 @@ export const getScheduleById = async (
   return Schedule.findById(scheduleId);
 };
 
-
 export const getNextPractice = async (
   teamId: Types.ObjectId,
 ): Promise<ScheduleOccurrence | null> => {
   const schedules = await Schedule.find({
     teamId,
     type: 'practice',
+    status: { $ne: 'cancelled' },
   });
 
   const now = new Date();
@@ -259,11 +574,11 @@ export const getNextPractice = async (
 
   return (
     occurrences.find(
-      (occurrence) => occurrence.occurrenceStartDate >= now,
+      (occurrence) => occurrence.occurrenceStartDate >= now
+        && occurrence.status !== 'cancelled',
     ) ?? null
   );
 };
-
 
 export const getLastPractice = async (
   teamId: Types.ObjectId,
@@ -275,6 +590,7 @@ export const getLastPractice = async (
   const schedules = await Schedule.find({
     teamId,
     type: 'practice',
+    status: { $ne: 'cancelled' },
   });
 
   const now = new Date();
@@ -283,7 +599,8 @@ export const getLastPractice = async (
   endOfToday.setHours(23, 59, 59, 999);
 
   const occurrences = expandRecurringSchedules(schedules)
-    .filter((occurrence) => occurrence.occurrenceStartDate <= endOfToday)
+    .filter((occurrence) => occurrence.occurrenceStartDate <= endOfToday
+      && occurrence.status !== 'cancelled')
     .sort(
       (a, b) =>
         b.occurrenceStartDate.getTime() - a.occurrenceStartDate.getTime(),
@@ -328,6 +645,7 @@ export const getPlayerAttendance = async (
 }> => {
   const schedules = await Schedule.find({
     type: 'practice',
+    status: { $ne: 'cancelled' },
     'attendance.profileId': profileId,
   });
 
@@ -369,6 +687,7 @@ export const getNextGame = async (
   const schedules = await Schedule.find({
     teamId,
     type: 'game',
+    status: { $ne: 'cancelled' },
   });
 
   const now = new Date();
@@ -377,7 +696,8 @@ export const getNextGame = async (
 
   return (
     occurrences.find(
-      (occurrence) => occurrence.occurrenceStartDate >= now,
+      (occurrence) => occurrence.occurrenceStartDate >= now
+        && occurrence.status !== 'cancelled',
     ) ?? null
   );
 };

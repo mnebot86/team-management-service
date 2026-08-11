@@ -2,6 +2,7 @@ import { Schema, model, Types, Document } from 'mongoose';
 
 export interface ScheduleDocument extends Document {
   teamId: Types.ObjectId;
+  recurrenceGroupId?: Types.ObjectId | null;
   title?: string;
   description: string;
   type: string;
@@ -22,7 +23,20 @@ export interface ScheduleDocument extends Document {
     frequency: string | null;
     daysOfWeek: number[];
     endDate: Date | null;
+    cancelledDates: Date[];
+    occurrenceOverrides: {
+      occurrenceDate: Date;
+      isCancelled: boolean;
+      cancellationReason: string | null;
+      changes: Record<string, unknown>;
+      updatedByUserId: Types.ObjectId;
+      updatedAt: Date;
+    }[];
   };
+  status: 'scheduled' | 'cancelled';
+  cancellationReason?: string | null;
+  cancelledAt?: Date | null;
+  cancelledByUserId?: Types.ObjectId | null;
   attendance: {
     profileId: Types.ObjectId;
     status: 'present' | 'late' | 'absent';
@@ -41,6 +55,11 @@ const scheduleSchema = new Schema<ScheduleDocument>(
       type: Schema.Types.ObjectId,
       ref: 'Team',
       required: true,
+    },
+    recurrenceGroupId: {
+      type: Schema.Types.ObjectId,
+      index: true,
+      default: null,
     },
     title: {
       type: String,
@@ -103,6 +122,46 @@ const scheduleSchema = new Schema<ScheduleDocument>(
         type: Date,
         default: null,
       },
+      cancelledDates: {
+        type: [Date],
+        default: [],
+      },
+      occurrenceOverrides: {
+        type: [
+          {
+            occurrenceDate: { type: Date, required: true },
+            isCancelled: { type: Boolean, default: false },
+            cancellationReason: { type: String, default: null },
+            changes: { type: Schema.Types.Mixed, default: {} },
+            updatedByUserId: {
+              type: Schema.Types.ObjectId,
+              ref: 'User',
+              required: true,
+            },
+            updatedAt: { type: Date, default: Date.now },
+          },
+        ],
+        default: [],
+      },
+    },
+    status: {
+      type: String,
+      enum: ['scheduled', 'cancelled'],
+      default: 'scheduled',
+    },
+    cancellationReason: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    cancelledAt: {
+      type: Date,
+      default: null,
+    },
+    cancelledByUserId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
     },
     attendance: {
       type: [

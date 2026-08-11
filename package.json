@@ -12,7 +12,9 @@
     "test": "NODE_ENV=test jest --runInBand",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
-    "migrate:sports": "ts-node src/scripts/migrateFootballSportDefinitions.ts"
+    "migrate:sports": "ts-node src/scripts/migrateFootballSportDefinitions.ts",
+    "migrate:schedules": "yarn build && node dist/scripts/migrateScheduleCancellationFields.js",
+    "migrate:schedules:materialize": "yarn build && node dist/scripts/migrateScheduleCancellationFields.js --repair-recurring-cancellations --materialize-recurring-schedules"
   },
   "keywords": [],
   "author": "",

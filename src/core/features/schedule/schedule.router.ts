@@ -7,6 +7,9 @@ import {
   updateAttendance,
   getLastPractice,
   getPlayerAttendance,
+  updateSchedule,
+  cancelSchedule,
+  deleteSchedule,
 } from './schedule.controller';
 
 const router = Router();
@@ -17,6 +20,9 @@ router.get('/player/:profileId/attendance', getPlayerAttendance);
 router.get('/team/:teamId/next-game', getNextGame);
 router.get('/team/:teamId', getTeamSchedule);
 router.patch('/:scheduleId/attendance', updateAttendance);
+router.patch('/:scheduleId/cancel', cancelSchedule);
+router.patch('/:scheduleId', updateSchedule);
+router.delete('/:scheduleId', deleteSchedule);
 router.post('/', createSchedule);
 
 export default router;

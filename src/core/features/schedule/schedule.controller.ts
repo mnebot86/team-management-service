@@ -6,7 +6,11 @@ import * as scheduleService from './schedule.service';
 import { sendError, sendSuccess } from '../../shared/utils/response';
 import { AuthRequest } from '../team/team.types';
 import { logger } from '../../shared/utils/logger';
-import { emitScheduleCreated, emitScheduleUpdated } from './schedule.emitters';
+import {
+  emitScheduleCreated,
+  emitScheduleDeleted,
+  emitScheduleUpdated,
+} from './schedule.emitters';
 import { TeamMember } from '../teamMember/teamMember.modal';
 import { createNotification } from '../notifications/notification.service';
 import { NOTIFICATION_TYPES } from '../notifications/notification.model';
@@ -115,6 +119,227 @@ export const createSchedule = async (
     );
   }
 
+};
+
+export const updateSchedule = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<Response> => {
+  const { scheduleId } = req.params;
+  const updatedByUserId = req.user?.id;
+
+  if (!scheduleId || !Types.ObjectId.isValid(scheduleId as string)) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid schedule ID');
+  }
+
+  const {
+    title,
+    description,
+    eventType,
+    opponentName,
+    isHomeGame,
+    startDate,
+    startTime,
+    endTime,
+    locationName,
+    streetAddress,
+    city,
+    state,
+    zipCode,
+    recurrence,
+    occurrenceDate,
+  } = req.body;
+  const scope = req.body.scope ?? (occurrenceDate ? 'occurrence' : 'series');
+
+  if (!['occurrence', 'series'].includes(scope)) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid update scope');
+  }
+
+  if (occurrenceDate && Number.isNaN(Date.parse(occurrenceDate))) {
+    return sendError(
+      res,
+      StatusCodes.BAD_REQUEST,
+      'Invalid occurrenceDate',
+    );
+  }
+
+  if (scope === 'occurrence' && (!updatedByUserId || !Types.ObjectId.isValid(updatedByUserId))) {
+    return sendError(res, StatusCodes.UNAUTHORIZED, 'Invalid user');
+  }
+
+  try {
+    const schedule = await scheduleService.updateSchedule(
+      new Types.ObjectId(scheduleId as string),
+      {
+        title,
+        description,
+        type: eventType,
+        opponentName,
+        isHomeGame,
+        startDate,
+        startTime,
+        endTime,
+        location: {
+          name: locationName,
+          street: streetAddress,
+          city,
+          state,
+          zip: zipCode,
+        },
+        recurrence,
+      },
+      scope === 'occurrence' && occurrenceDate
+        ? new Date(occurrenceDate)
+        : undefined,
+      scope === 'occurrence' && occurrenceDate
+        ? new Types.ObjectId(updatedByUserId)
+        : undefined,
+      scope === 'series',
+    );
+
+    if (!schedule) {
+      return sendError(res, StatusCodes.NOT_FOUND, 'Schedule not found');
+    }
+
+    emitScheduleUpdated(schedule.teamId.toString(), schedule);
+
+    return sendSuccess(
+      res,
+      StatusCodes.OK,
+      schedule,
+      'Schedule event updated successfully',
+    );
+  } catch (error) {
+    logger.error({ error }, 'Error updating schedule event');
+
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to update schedule event',
+    );
+  }
+};
+
+export const cancelSchedule = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<Response> => {
+  const { scheduleId } = req.params;
+  const cancelledByUserId = req.user?.id;
+  const { occurrenceDate, reason } = req.body;
+  const scope = req.body.scope ?? (occurrenceDate ? 'occurrence' : 'series');
+
+  if (!scheduleId || !Types.ObjectId.isValid(scheduleId as string)) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid schedule ID');
+  }
+
+  if (!cancelledByUserId || !Types.ObjectId.isValid(cancelledByUserId)) {
+    return sendError(res, StatusCodes.UNAUTHORIZED, 'Invalid user');
+  }
+
+  if (!['occurrence', 'series'].includes(scope)) {
+    return sendError(
+      res,
+      StatusCodes.BAD_REQUEST,
+      'Invalid cancellation scope. Expected occurrence or series',
+    );
+  }
+
+  if (occurrenceDate && Number.isNaN(Date.parse(occurrenceDate))) {
+    return sendError(
+      res,
+      StatusCodes.BAD_REQUEST,
+      'Invalid occurrenceDate',
+    );
+  }
+
+  try {
+    const schedule = await scheduleService.cancelSchedule(
+      new Types.ObjectId(scheduleId as string),
+      new Types.ObjectId(cancelledByUserId),
+      reason,
+      scope === 'occurrence' && occurrenceDate
+        ? new Date(occurrenceDate)
+        : undefined,
+      scope === 'series',
+    );
+
+    if (!schedule) {
+      return sendError(res, StatusCodes.NOT_FOUND, 'Schedule not found');
+    }
+
+    emitScheduleUpdated(schedule.teamId.toString(), schedule);
+
+    return sendSuccess(
+      res,
+      StatusCodes.OK,
+      schedule,
+      'Schedule event cancelled successfully',
+    );
+  } catch (error) {
+    logger.error({ error }, 'Error cancelling schedule event');
+
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to cancel schedule event',
+    );
+  }
+};
+
+export const deleteSchedule = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<Response> => {
+  const { scheduleId } = req.params;
+  const scope = req.query.scope ?? 'occurrence';
+
+  if (!scheduleId || !Types.ObjectId.isValid(scheduleId as string)) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid schedule ID');
+  }
+
+  if (scope !== 'occurrence' && scope !== 'series') {
+    return sendError(
+      res,
+      StatusCodes.BAD_REQUEST,
+      'Invalid deletion scope. Expected occurrence or series',
+    );
+  }
+
+  try {
+    const schedule = await scheduleService.deleteSchedule(
+      new Types.ObjectId(scheduleId as string),
+      scope === 'series',
+    );
+
+    if (!schedule) {
+      return sendError(res, StatusCodes.NOT_FOUND, 'Schedule not found');
+    }
+
+    emitScheduleDeleted(
+      schedule.teamId.toString(),
+      scheduleId as string,
+      scope,
+      schedule.recurrenceGroupId?.toString(),
+    );
+
+    return sendSuccess(
+      res,
+      StatusCodes.OK,
+      null,
+      scope === 'series'
+        ? 'Recurring schedule series deleted successfully'
+        : 'Schedule occurrence deleted successfully',
+    );
+  } catch (error) {
+    logger.error({ error }, 'Error deleting schedule event');
+
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to delete schedule event',
+    );
+  }
 };
 
 export const getTeamSchedule = async (
