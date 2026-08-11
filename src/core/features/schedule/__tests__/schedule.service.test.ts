@@ -63,6 +63,81 @@ describe('schedule service', () => {
     expect(sections.find((section) => section.title === 'Upcoming')?.data ?? []).toHaveLength(0);
   });
 
+  it('keeps events visible in Today after their start time has passed', async () => {
+    const now = new Date();
+    const earlierToday = new Date(now);
+    earlierToday.setHours(now.getHours() - 2, 0, 0, 0);
+    const teamId = new Types.ObjectId();
+    const sortMock = jest.fn().mockResolvedValueOnce([
+      {
+        _id: new Types.ObjectId(),
+        teamId,
+        title: 'Morning practice',
+        description: '',
+        type: 'practice',
+        opponentName: null,
+        isHomeGame: null,
+        startDate: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+        startTime: earlierToday,
+        endTime: null,
+        status: 'scheduled',
+        location: {},
+        recurrence: { isRecurring: false },
+        attendance: [],
+      },
+    ]);
+    (Schedule.find as jest.Mock).mockReturnValueOnce({ sort: sortMock });
+
+    const sections = await getTeamSchedule(teamId);
+
+    expect(sections.find(section => section.title === 'Today')?.data)
+      .toHaveLength(1);
+  });
+
+  it('returns a materialized recurring occurrence scheduled for today', async () => {
+    // This is August 11 in New York, but already August 12 in UTC.
+    jest.setSystemTime(new Date('2026-08-12T01:00:00.000Z'));
+    const teamId = new Types.ObjectId('6a715376c9ba79300925ee65');
+    const sortMock = jest.fn().mockResolvedValueOnce([
+      {
+        _id: new Types.ObjectId('6a7a83688d33b87e7ea2c0b8'),
+        teamId,
+        recurrenceGroupId: new Types.ObjectId('6a7a83688d33b87e7ea2c0b6'),
+        title: 'Evening',
+        description: '',
+        type: 'practice',
+        opponentName: null,
+        isHomeGame: null,
+        startDate: new Date('2026-08-11T19:04:10.823Z'),
+        startTime: new Date('2026-08-10T22:00:16.000Z'),
+        endTime: new Date('2026-08-11T00:00:22.000Z'),
+        location: {},
+        recurrence: {
+          isRecurring: true,
+          frequency: 'weekly',
+          daysOfWeek: [1, 2, 3, 4],
+          endDate: new Date('2026-10-29T19:04:50.000Z'),
+          cancelledDates: [],
+          occurrenceOverrides: [],
+        },
+        status: 'scheduled',
+        cancellationReason: null,
+        attendance: [],
+      },
+    ]);
+    (Schedule.find as jest.Mock).mockReturnValueOnce({ sort: sortMock });
+
+    const sections = await getTeamSchedule(teamId);
+
+    expect(sections.find(section => section.title === 'Today')?.data)
+      .toEqual([
+        expect.objectContaining({
+          scheduleId: '6a7a83688d33b87e7ea2c0b8',
+          title: 'Evening',
+        }),
+      ]);
+  });
+
   it('marks only the matching recurring date as cancelled', async () => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() + 1);

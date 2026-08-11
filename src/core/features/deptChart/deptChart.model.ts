@@ -45,6 +45,23 @@ const positionSchema = new Schema(
       default: 1,
     },
 
+    coordinates: {
+      x: {
+        type: Number,
+        required: true,
+        min: 0,
+        max: 100,
+        default: 50,
+      },
+      y: {
+        type: Number,
+        required: true,
+        min: 0,
+        max: 100,
+        default: 50,
+      },
+    },
+
     players: {
       type: [playerSchema],
       default: [],
