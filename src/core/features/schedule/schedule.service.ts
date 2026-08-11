@@ -1,8 +1,33 @@
 import { Types } from 'mongoose';
 
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 
 import { Schedule, ScheduleDocument } from './schedule.model';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const scheduleTimezone = process.env.SCHEDULE_TIMEZONE || 'America/New_York';
+
+const combineOccurrenceDateAndTime = (
+  date: Date | string,
+  time?: Date | string | null,
+): Date => {
+  if (!time) {
+    return new Date(date);
+  }
+
+  const datePart = dayjs(date).tz(scheduleTimezone).format('YYYY-MM-DD');
+  const timePart = dayjs(time).tz(scheduleTimezone).format('HH:mm:ss');
+
+  return dayjs.tz(
+    `${datePart} ${timePart}`,
+    'YYYY-MM-DD HH:mm:ss',
+    scheduleTimezone,
+  ).toDate();
+};
 
 interface CreateScheduleInput {
   teamId: Types.ObjectId;
@@ -380,17 +405,13 @@ const expandRecurringSchedules = (
         startDate: schedule.startDate,
         startTime: schedule.startTime,
         endTime: schedule.endTime,
-        occurrenceStartDate: schedule.startTime
-          ? dayjs(schedule.startDate)
-            .hour(dayjs(schedule.startTime).hour())
-            .minute(dayjs(schedule.startTime).minute())
-            .second(0)
-            .millisecond(0)
-            .toDate()
-          : schedule.startDate,
+        occurrenceStartDate: combineOccurrenceDateAndTime(
+          schedule.startDate,
+          schedule.startTime,
+        ),
         status: schedule.status ?? 'scheduled',
         cancellationReason: schedule.cancellationReason ?? null,
-        attendance: undefined,
+        attendance: schedule.attendance,
         location: schedule.location,
       });
 
@@ -459,19 +480,15 @@ const expandRecurringSchedules = (
           endTime: changes.endTime !== undefined
             ? (changes.endTime ? new Date(changes.endTime as Date | string) : null)
             : schedule.endTime,
-          occurrenceStartDate: occurrenceTime
-            ? dayjs(occurrenceDate)
-              .hour(dayjs(occurrenceTime).hour())
-              .minute(dayjs(occurrenceTime).minute())
-              .second(0)
-              .millisecond(0)
-              .toDate()
-            : occurrenceDate,
+          occurrenceStartDate: combineOccurrenceDateAndTime(
+            occurrenceDate,
+            occurrenceTime,
+          ),
           status: isCancelled ? 'cancelled' : (schedule.status ?? 'scheduled'),
           cancellationReason: isCancelled
             ? (override?.cancellationReason ?? null)
             : (schedule.cancellationReason ?? null),
-          attendance: undefined,
+          attendance: schedule.attendance,
           location: {
             ...schedule.location,
             ...((changes.location as UpdateScheduleInput['location']) ?? {}),
@@ -499,12 +516,13 @@ export const getTeamSchedule = async (
 
   const now = new Date();
 
-  const endOfToday = new Date(now);
-  endOfToday.setHours(23, 59, 59, 999);
-
-  const endOfWeek = new Date(now);
-  endOfWeek.setDate(now.getDate() + (7 - now.getDay()));
-  endOfWeek.setHours(23, 59, 59, 999);
+  const zonedNow = dayjs(now).tz(scheduleTimezone);
+  const startOfToday = zonedNow.startOf('day').toDate();
+  const endOfToday = zonedNow.endOf('day').toDate();
+  const endOfWeek = zonedNow
+    .add(7 - zonedNow.day(), 'day')
+    .endOf('day')
+    .toDate();
 
   if (period === 'past') {
     const past = events
@@ -522,7 +540,7 @@ export const getTeamSchedule = async (
   const today = events.filter((event) => {
     const eventDate = event.occurrenceStartDate;
 
-    return eventDate >= now && eventDate <= endOfToday;
+    return eventDate >= startOfToday && eventDate <= endOfToday;
   });
 
   const thisWeek = events.filter((event) => {
@@ -594,9 +612,10 @@ export const getLastPractice = async (
   });
 
   const now = new Date();
-  const endOfToday = new Date(now);
-
-  endOfToday.setHours(23, 59, 59, 999);
+  const endOfToday = dayjs(now)
+    .tz(scheduleTimezone)
+    .endOf('day')
+    .toDate();
 
   const occurrences = expandRecurringSchedules(schedules)
     .filter((occurrence) => occurrence.occurrenceStartDate <= endOfToday
