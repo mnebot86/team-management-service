@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import { Types } from 'mongoose';
 
 import * as scheduleService from './schedule.service';
+import { ScheduleDocument } from './schedule.model';
 import { sendError, sendSuccess } from '../../shared/utils/response';
 import { AuthRequest } from '../team/team.types';
 import { logger } from '../../shared/utils/logger';
@@ -147,23 +148,14 @@ export const updateSchedule = async (
     state,
     zipCode,
     recurrence,
-    occurrenceDate,
   } = req.body;
-  const scope = req.body.scope ?? (occurrenceDate ? 'occurrence' : 'series');
+  const scope = req.body.scope ?? 'occurrence';
 
   if (!['occurrence', 'series'].includes(scope)) {
     return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid update scope');
   }
 
-  if (occurrenceDate && Number.isNaN(Date.parse(occurrenceDate))) {
-    return sendError(
-      res,
-      StatusCodes.BAD_REQUEST,
-      'Invalid occurrenceDate',
-    );
-  }
-
-  if (scope === 'occurrence' && (!updatedByUserId || !Types.ObjectId.isValid(updatedByUserId))) {
+  if (!updatedByUserId || !Types.ObjectId.isValid(updatedByUserId)) {
     return sendError(res, StatusCodes.UNAUTHORIZED, 'Invalid user');
   }
 
@@ -188,12 +180,6 @@ export const updateSchedule = async (
         },
         recurrence,
       },
-      scope === 'occurrence' && occurrenceDate
-        ? new Date(occurrenceDate)
-        : undefined,
-      scope === 'occurrence' && occurrenceDate
-        ? new Types.ObjectId(updatedByUserId)
-        : undefined,
       scope === 'series',
     );
 
@@ -226,8 +212,8 @@ export const cancelSchedule = async (
 ): Promise<Response> => {
   const { scheduleId } = req.params;
   const cancelledByUserId = req.user?.id;
-  const { occurrenceDate, reason } = req.body;
-  const scope = req.body.scope ?? (occurrenceDate ? 'occurrence' : 'series');
+  const { reason } = req.body;
+  const scope = req.body.scope ?? 'occurrence';
 
   if (!scheduleId || !Types.ObjectId.isValid(scheduleId as string)) {
     return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid schedule ID');
@@ -245,22 +231,11 @@ export const cancelSchedule = async (
     );
   }
 
-  if (occurrenceDate && Number.isNaN(Date.parse(occurrenceDate))) {
-    return sendError(
-      res,
-      StatusCodes.BAD_REQUEST,
-      'Invalid occurrenceDate',
-    );
-  }
-
   try {
     const schedule = await scheduleService.cancelSchedule(
       new Types.ObjectId(scheduleId as string),
       new Types.ObjectId(cancelledByUserId),
       reason,
-      scope === 'occurrence' && occurrenceDate
-        ? new Date(occurrenceDate)
-        : undefined,
       scope === 'series',
     );
 
@@ -499,10 +474,24 @@ export const updateAttendance = async (
     return sendError(res, StatusCodes.UNAUTHORIZED, 'Invalid user');
   }
 
+  if (!Array.isArray(attendance) || attendance.some(record =>
+    !record
+    || !Types.ObjectId.isValid(record.profileId)
+    || !['present', 'late', 'absent'].includes(record.status))) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid attendance');
+  }
+
   try {
-    const attendanceWithUser = attendance.map((record: any) => ({
-      ...record,
+    const attendanceWithUser: ScheduleDocument['attendance'] = attendance.map((record: {
+      profileId: string;
+      status: 'present' | 'late' | 'absent';
+      note?: string;
+    }) => ({
+      profileId: new Types.ObjectId(record.profileId),
+      status: record.status,
+      ...(record.note !== undefined ? { note: record.note } : {}),
       markedByUserId: new Types.ObjectId(markedByUserId),
+      markedAt: new Date(),
     }));
 
     const schedule = await scheduleService.updateAttendance(
