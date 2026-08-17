@@ -96,6 +96,52 @@ describe('schedule service', () => {
       .toHaveLength(1);
   });
 
+  it('filters team schedule entries by schedule type', async () => {
+    const teamId = new Types.ObjectId();
+    const sortMock = jest.fn().mockResolvedValueOnce([
+      {
+        _id: new Types.ObjectId(),
+        teamId,
+        title: 'Practice session',
+        description: '',
+        type: 'practice',
+        opponentName: null,
+        isHomeGame: null,
+        startDate: new Date('2026-08-12T12:00:00.000Z'),
+        startTime: new Date('2026-08-12T12:00:00.000Z'),
+        endTime: null,
+        status: 'scheduled',
+        location: {},
+        recurrence: { isRecurring: false },
+        attendance: [],
+      },
+      {
+        _id: new Types.ObjectId(),
+        teamId,
+        title: 'Game night',
+        description: '',
+        type: 'game',
+        opponentName: 'Rivals',
+        isHomeGame: true,
+        startDate: new Date('2026-08-13T12:00:00.000Z'),
+        startTime: new Date('2026-08-13T12:00:00.000Z'),
+        endTime: null,
+        status: 'scheduled',
+        location: {},
+        recurrence: { isRecurring: false },
+        attendance: [],
+      },
+    ]);
+    (Schedule.find as jest.Mock).mockReturnValueOnce({ sort: sortMock });
+
+    const sections = await getTeamSchedule(teamId, 'upcoming', 'practice');
+
+    expect(sections.flatMap(section => section.data)).toEqual([
+      expect.objectContaining({ title: 'Practice session', type: 'practice' }),
+    ]);
+    expect(sections.flatMap(section => section.data).every(item => item.type === 'practice')).toBe(true);
+  });
+
   it('returns a materialized recurring occurrence scheduled for today', async () => {
     // This is August 11 in New York, but already August 12 in UTC.
     jest.setSystemTime(new Date('2026-08-12T01:00:00.000Z'));

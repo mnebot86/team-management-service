@@ -322,7 +322,7 @@ export const getTeamSchedule = async (
   res: Response,
 ): Promise<Response> => {
   const { teamId } = req.params;
-  const { period } = req.query;
+  const { period, type } = req.query;
 
   if (!teamId || !Types.ObjectId.isValid(teamId as string)) {
     return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid team ID');
@@ -339,10 +339,24 @@ export const getTeamSchedule = async (
     );
   }
 
+  const normalizedType = typeof type === 'string' ? type.toLowerCase() : undefined;
+
+  if (
+    normalizedType !== undefined
+    && !['event', 'game', 'practice', 'other'].includes(normalizedType)
+  ) {
+    return sendError(
+      res,
+      StatusCodes.BAD_REQUEST,
+      'Invalid type. Expected one of: event, game, practice, other',
+    );
+  }
+
   try {
     const schedule = await scheduleService.getTeamSchedule(
       new Types.ObjectId(teamId as string),
       period as scheduleService.SchedulePeriod | undefined,
+      normalizedType,
     );
 
     return sendSuccess(

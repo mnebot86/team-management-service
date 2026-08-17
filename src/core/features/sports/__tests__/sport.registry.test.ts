@@ -50,6 +50,29 @@ describe('football sport definition', () => {
     }
   });
 
+  it('uses the kickoff team positions in formation order', () => {
+    const variant = getSportVariant('football', 'tackle-11');
+    const positionsById = new Map(
+      variant?.positions.map(position => [position.id, position.name]),
+    );
+    const kickOff = variant?.depthCharts.find(chart => chart.name === 'Kick Off');
+
+    expect(kickOff?.positionIds.map(positionId => positionsById.get(positionId)))
+      .toEqual([
+        'Left Contain',
+        'Left Wing',
+        'Left Safety',
+        'Left Hash',
+        'Left Middle',
+        'Kicker',
+        'Right Middle',
+        'Right Hash',
+        'Right Safety',
+        'Right Wing',
+        'Right Contain',
+      ]);
+  });
+
   it('resolves ids, labels, and abbreviations to canonical ids', () => {
     expect(resolvePositionIds('football', 'tackle-11', [
       'football.qb',

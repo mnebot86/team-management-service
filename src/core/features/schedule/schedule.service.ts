@@ -320,6 +320,21 @@ interface ScheduleOccurrence {
 }
 
 export type SchedulePeriod = 'upcoming' | 'past';
+export type ScheduleTypeFilter = 'event' | 'game' | 'practice' | 'other';
+
+const normalizeScheduleTypeFilter = (
+  type?: string,
+): ScheduleTypeFilter | undefined => {
+  if (type === undefined) {
+    return undefined;
+  }
+
+  const normalized = type.toLowerCase();
+
+  return ['event', 'game', 'practice', 'other'].includes(normalized)
+    ? normalized as ScheduleTypeFilter
+    : undefined;
+};
 
 const toScheduleOccurrence = (
   schedule: ScheduleDocument,
@@ -347,9 +362,14 @@ const toScheduleOccurrence = (
 export const getTeamSchedule = async (
   teamId: Types.ObjectId,
   period: SchedulePeriod = 'upcoming',
+  type?: string,
 ): Promise<ScheduleSection[]> => {
-  const schedules = await Schedule.find({ teamId })
-    .sort({ startDate: 1 });
+  const normalizedType = normalizeScheduleTypeFilter(type);
+
+  const schedules = await Schedule.find({
+    teamId,
+    ...(normalizedType ? { type: normalizedType } : {}),
+  }).sort({ startDate: 1 });
 
   const events = schedules.map(toScheduleOccurrence);
 

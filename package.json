@@ -13,6 +13,7 @@
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "migrate:sports": "ts-node src/scripts/migrateFootballSportDefinitions.ts",
+    "migrate:kickoff-positions": "yarn build && node dist/scripts/migrateKickOffPositions.js",
     "migrate:schedules": "yarn build && node dist/scripts/migrateScheduleCancellationFields.js",
     "migrate:schedules:materialize": "yarn build && node dist/scripts/migrateScheduleCancellationFields.js --repair-recurring-cancellations --materialize-recurring-schedules",
     "migrate:schedules:reset-upcoming-attendance": "yarn build && node dist/scripts/resetUpcomingScheduleAttendance.js"

@@ -68,11 +68,10 @@ const positions = [
   position('rsh', 'Rusher', 'RSH', 'Special Teams', 51),
   position('ds', 'Deep Safety', 'DS', 'Special Teams', 52),
   position('br', 'Block Returner', 'BR', 'Special Teams', 53),
+  position('lcon', 'Left Contain', 'LCON', 'Special Teams', 54),
+  position('lsaf', 'Left Safety', 'LSAF', 'Special Teams', 55),
+  position('rcon', 'Right Contain', 'RCON', 'Special Teams', 56),
 ];
-
-const positionIdsForGroup = (group: string) => positions
-  .filter((item) => item.group === group)
-  .map((item) => item.id);
 
 const buildChartPositions = (positionIds: string[]) => {
   const chartPositions = [...positionIds];
@@ -112,17 +111,17 @@ const defensePositions = buildChartPositions([
   'football.fs',
 ]);
 const kickOffPositions = buildChartPositions([
-  'football.k',
-  'football.lo',
-  'football.li',
-  'football.lm',
+  'football.lcon',
+  'football.lw',
+  'football.lsaf',
   'football.lh',
-  'football.rh',
+  'football.lm',
+  'football.k',
   'football.rm',
-  'football.ri',
-  'football.ro',
-  'football.ls',
+  'football.rh',
   'football.rs',
+  'football.rw',
+  'football.rcon',
 ]);
 const kickReceivingPositions = buildChartPositions([
   'football.kr',
