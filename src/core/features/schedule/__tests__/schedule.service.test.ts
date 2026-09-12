@@ -5,6 +5,7 @@ import {
   getLastPractice,
   getNextPractice,
   getTeamSchedule,
+  getTeamGameStats,
   updateSchedule,
 } from '../schedule.service';
 import { Schedule } from '../schedule.model';
@@ -115,18 +116,37 @@ describe('schedule service', () => {
         recurrence: { isRecurring: false },
         attendance: [],
       },
+    ]);
+    (Schedule.find as jest.Mock).mockReturnValueOnce({ sort: sortMock });
+
+    const sections = await getTeamSchedule(teamId, 'upcoming', 'practice');
+
+    expect(Schedule.find).toHaveBeenCalledWith(expect.objectContaining({
+      teamId,
+      type: 'practice',
+    }));
+    expect(sections.flatMap(section => section.data)).toEqual([
+      expect.objectContaining({ title: 'Practice session', type: 'practice' }),
+    ]);
+  });
+
+  it('includes game outcome and scores in schedule responses', async () => {
+    const teamId = new Types.ObjectId();
+    const sortMock = jest.fn().mockResolvedValueOnce([
       {
         _id: new Types.ObjectId(),
         teamId,
-        title: 'Game night',
+        title: 'Championship game',
         description: '',
         type: 'game',
         opponentName: 'Rivals',
         isHomeGame: true,
-        startDate: new Date('2026-08-13T12:00:00.000Z'),
-        startTime: new Date('2026-08-13T12:00:00.000Z'),
+        startDate: new Date('2026-08-12T12:00:00.000Z'),
+        startTime: new Date('2026-08-12T12:00:00.000Z'),
         endTime: null,
         status: 'scheduled',
+        gameOutCome: 'win',
+        scores: { homeTeamScore: 35, awayTeamScore: 6 },
         location: {},
         recurrence: { isRecurring: false },
         attendance: [],
@@ -134,12 +154,15 @@ describe('schedule service', () => {
     ]);
     (Schedule.find as jest.Mock).mockReturnValueOnce({ sort: sortMock });
 
-    const sections = await getTeamSchedule(teamId, 'upcoming', 'practice');
+    const sections = await getTeamSchedule(teamId);
 
     expect(sections.flatMap(section => section.data)).toEqual([
-      expect.objectContaining({ title: 'Practice session', type: 'practice' }),
+      expect.objectContaining({
+        gameOutcome: 'win',
+        homeScore: 35,
+        awayScore: 6,
+      }),
     ]);
-    expect(sections.flatMap(section => section.data).every(item => item.type === 'practice')).toBe(true);
   });
 
   it('returns a materialized recurring occurrence scheduled for today', async () => {
@@ -313,6 +336,29 @@ describe('schedule service', () => {
     expect(occurrences).toHaveLength(3);
     expect(occurrences.filter(event => event.status === 'cancelled')).toHaveLength(1);
     expect(occurrences.filter(event => event.status === 'scheduled')).toHaveLength(2);
+  });
+
+  it('calculates completed team game statistics', async () => {
+    const teamId = new Types.ObjectId();
+    (Schedule.find as jest.Mock).mockResolvedValueOnce([
+      { gameOutCome: 'win' },
+      { gameOutCome: 'win' },
+      { gameOutCome: 'loss' },
+      { gameOutCome: 'tie' },
+    ]);
+
+    await expect(getTeamGameStats(teamId)).resolves.toEqual({
+      wins: 2,
+      losses: 1,
+      totalGames: 4,
+      winRate: 50,
+    });
+    expect(Schedule.find).toHaveBeenCalledWith({
+      teamId,
+      type: 'game',
+      status: { $ne: 'cancelled' },
+      gameOutCome: { $in: ['win', 'loss', 'tie'] },
+    });
   });
 
   it('updates only supplied schedule and recurrence fields', async () => {

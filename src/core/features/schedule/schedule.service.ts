@@ -78,6 +78,11 @@ export interface UpdateScheduleInput {
     daysOfWeek?: number[];
     endDate?: Date | string | null;
   };
+  gameOutCome?: 'win' | 'loss' | 'tie' | 'cancelled' | 'pending';
+  scores?: {
+    homeTeamScore?: number | null;
+    awayTeamScore?: number | null;
+  };
 }
 
 export const createSchedule = async (
@@ -183,7 +188,7 @@ const buildScheduleUpdate = (
 ): Record<string, unknown> => {
   const update: Record<string, unknown> = {};
 
-  const scalarFields: (keyof Omit<UpdateScheduleInput, 'location' | 'recurrence'>)[] = [
+  const scalarFields: (keyof Omit<UpdateScheduleInput, 'location' | 'recurrence' | 'scores'>)[] = [
     'title',
     'description',
     'type',
@@ -192,6 +197,7 @@ const buildScheduleUpdate = (
     'startDate',
     'startTime',
     'endTime',
+    'gameOutCome',
   ];
 
   scalarFields.forEach((field) => {
@@ -207,6 +213,12 @@ const buildScheduleUpdate = (
   Object.entries(input.location ?? {}).forEach(([field, value]) => {
     if (value !== undefined) {
       update[`location.${field}`] = value;
+    }
+  });
+
+  Object.entries(input.scores ?? {}).forEach(([field, value]) => {
+    if (value !== undefined) {
+      update[`scores.${field}`] = value;
     }
   });
 
@@ -310,6 +322,9 @@ interface ScheduleOccurrence {
   status: 'scheduled' | 'cancelled';
   cancellationReason?: string | null;
   attendance?: ScheduleDocument['attendance'] | undefined;
+  gameOutcome?: ScheduleDocument['gameOutCome'];
+  homeScore?: number | null;
+  awayScore?: number | null;
   location: {
     name?: string;
     street?: string;
@@ -356,6 +371,9 @@ const toScheduleOccurrence = (
   status: schedule.status ?? 'scheduled',
   cancellationReason: schedule.cancellationReason ?? null,
   attendance: schedule.attendance,
+  gameOutcome: schedule.gameOutCome,
+  homeScore: schedule.scores?.homeTeamScore ?? null,
+  awayScore: schedule.scores?.awayTeamScore ?? null,
   location: schedule.location,
 });
 
@@ -593,6 +611,41 @@ export const getNextGame = async (
         && occurrence.status !== 'cancelled',
     ) ?? null
   );
+};
+
+export interface TeamGameStats {
+  wins: number;
+  losses: number;
+  totalGames: number;
+  winRate: number;
+}
+
+export const getTeamGameStats = async (
+  teamId: Types.ObjectId,
+): Promise<TeamGameStats> => {
+  const schedules = await Schedule.find({
+    teamId,
+    type: 'game',
+    status: { $ne: 'cancelled' },
+    gameOutCome: { $in: ['win', 'loss', 'tie'] },
+  });
+
+  const wins = schedules.filter(
+    schedule => schedule.gameOutCome === 'win',
+  ).length;
+
+  const losses = schedules.filter(
+    schedule => schedule.gameOutCome === 'loss',
+  ).length;
+
+  const totalGames = schedules.length;
+
+  return {
+    wins,
+    losses,
+    totalGames,
+    winRate: totalGames === 0 ? 0 : (wins / totalGames) * 100,
+  };
 };
 
 export const updateAttendance = async (

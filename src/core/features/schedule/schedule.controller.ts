@@ -148,6 +148,9 @@ export const updateSchedule = async (
     state,
     zipCode,
     recurrence,
+    gameOutcome,
+    homeScore,
+    awayScore,
   } = req.body;
   const scope = req.body.scope ?? 'occurrence';
 
@@ -179,6 +182,11 @@ export const updateSchedule = async (
           zip: zipCode,
         },
         recurrence,
+        gameOutCome: gameOutcome,
+        scores: {
+          homeTeamScore: homeScore,
+          awayTeamScore: awayScore,
+        },
       },
       scope === 'series',
     );
@@ -472,6 +480,38 @@ export const getNextGame = async (
   }
 };
 
+export const getTeamGameStats = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<Response> => {
+  const { teamId } = req.params;
+
+  if (!teamId || !Types.ObjectId.isValid(teamId as string)) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid team ID');
+  }
+
+  try {
+    const stats = await scheduleService.getTeamGameStats(
+      new Types.ObjectId(teamId as string),
+    );
+
+    return sendSuccess(
+      res,
+      StatusCodes.OK,
+      stats,
+      'Team game statistics retrieved successfully',
+    );
+  } catch (error) {
+    logger.error({ error }, 'Error retrieving team game statistics');
+
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to retrieve team game statistics',
+    );
+  }
+};
+
 export const updateAttendance = async (
   req: AuthRequest,
   res: Response,
@@ -592,3 +632,4 @@ export const getPlayerAttendance = async (
     );
   }
 };
+

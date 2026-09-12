@@ -44,6 +44,11 @@ export interface ScheduleDocument extends Document {
     markedByUserId: Types.ObjectId;
     markedAt: Date;
   }[];
+  gameOutCome?: 'win' | 'loss' | 'tie' | 'cancelled' | 'pending';
+  scores?: {
+    homeTeamScore: number | null;
+    awayTeamScore: number | null;
+  };
   createdByUserId: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -197,6 +202,21 @@ const scheduleSchema = new Schema<ScheduleDocument>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+    },
+    gameOutCome: {
+      type: String,
+      enum: ['win', 'loss', 'tie', 'cancelled', 'pending'],
+      default: 'pending',
+    },
+    scores: {
+      homeTeamScore: {
+        type: Number,
+        default: null,
+      },
+      awayTeamScore: {
+        type: Number,
+        default: null,
+      },
     },
   },
   {

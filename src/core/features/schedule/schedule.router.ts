@@ -4,6 +4,7 @@ import {
   getTeamSchedule,
   getNextPractice,
   getNextGame,
+  getTeamGameStats,
   updateAttendance,
   getLastPractice,
   getPlayerAttendance,
@@ -18,6 +19,7 @@ router.get('/team/:teamId/next-practice', getNextPractice);
 router.get('/team/:teamId/last-practice', getLastPractice);
 router.get('/player/:profileId/attendance', getPlayerAttendance);
 router.get('/team/:teamId/next-game', getNextGame);
+router.get('/team/:teamId/stats', getTeamGameStats);
 router.get('/team/:teamId', getTeamSchedule);
 router.patch('/:scheduleId/attendance', updateAttendance);
 router.patch('/:scheduleId/cancel', cancelSchedule);
