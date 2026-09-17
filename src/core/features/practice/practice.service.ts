@@ -37,7 +37,6 @@ export const createPracticePlan = async (
   return practicePlan;
 };
 
-
 export const getPracticePlansByTeamId = async (
   teamId: string
 ): Promise<PracticeDocument[]> => {

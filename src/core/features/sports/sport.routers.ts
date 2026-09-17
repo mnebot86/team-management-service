@@ -1,5 +1,4 @@
 import { Router } from 'express';
-
 import { getSportDefinition, listSports } from './sport.controller';
 
 const router = Router();

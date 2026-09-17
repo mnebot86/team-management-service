@@ -1,5 +1,4 @@
 import { Types } from 'mongoose';
-
 import { DeptChart } from './deptChart.model';
 
 export interface CreateDeptChartInput {

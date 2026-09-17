@@ -38,5 +38,5 @@ export const env = {
   CLOUDINARY_SECRET_KEY: requiredEnv('CLOUDINARY_SECRET_KEY'),
   CLOUDINARY_URL: requiredEnv('CLOUDINARY_URL'),
 
-  RESEND_API_KEY: requiredEnv('RESEND_API_KEY')
+  RESEND_API_KEY: requiredEnv('RESEND_API_KEY'),
 };

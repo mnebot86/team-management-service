@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import dayjs from 'dayjs';
-
 import { connectDB } from '../config/db';
 import { Schedule } from '../core/features/schedule/schedule.model';
 import { logger } from '../core/shared/utils/logger';

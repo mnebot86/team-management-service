@@ -35,7 +35,7 @@ export const uploadUserProfileImage = async (
     };
   } catch (error) {
     logger.error({ err: error }, 'Failed to upload user profile image');
-    
+
     throw error;
   } finally {
     await fs.unlink(filePath).catch(() => null);

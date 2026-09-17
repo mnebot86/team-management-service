@@ -123,4 +123,4 @@ export const searchProfilesByName = async (
 
 export const updateProfile = async (profileId: Types.ObjectId, updateData: Partial<ProfileDocument>): Promise<ProfileDocument | null> => {
   return Profile.findByIdAndUpdate({ _id: profileId }, updateData, { new: true });
-}
+};

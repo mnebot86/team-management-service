@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-
 import { connectDB } from '../config/db';
 import { DeptChart } from '../core/features/deptChart/deptChart.model';
 import { Team } from '../core/features/team/team.model';

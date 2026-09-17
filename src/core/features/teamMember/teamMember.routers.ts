@@ -1,8 +1,6 @@
 import { Router } from 'express';
 import * as teamMemberController from './teamMember.controller';
-
 import { upload } from '../../middleware/upload.middleware';
-
 
 const router = Router();
 

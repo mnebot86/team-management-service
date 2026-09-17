@@ -4,7 +4,7 @@ import { UserProfile } from '../userProfile/userProfile.model';
 import { RegisterInput } from './auth.types';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { env } from '../../..//config/env';
+import { env } from '../../../config/env';
 import { emailService } from '../../../shared/email/email.service';
 
 type AuthInput = {
@@ -65,7 +65,7 @@ export const login = async ({ email, password }: AuthInput) => {
     throw new Error('INVALID_CREDENTIALS');
   }
 
-  let token
+  let token;
 
   if (userProfile) {
     token = generateToken(user._id.toString(), user.email, userProfile.profileId.toString());

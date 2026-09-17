@@ -1,5 +1,4 @@
 import { Socket } from 'socket.io';
-
 import { verifyAccessToken } from '../auth/jwt';
 import { User } from '../features/user/user.model';
 import { UserProfile } from '../features/userProfile/userProfile.model';

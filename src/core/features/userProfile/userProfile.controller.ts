@@ -1,14 +1,12 @@
 import { Response } from 'express';
 import mongoose from 'mongoose';
 import { StatusCodes } from 'http-status-codes';
-
 import {
   createUserProfile,
   getProfilesForUser,
   getUsersForProfile,
   deleteUserProfile,
 } from './userProfile.service';
-
 import { sendSuccess, sendError } from '../../shared/utils/response';
 import { AuthRequest } from '../team/team.types';
 

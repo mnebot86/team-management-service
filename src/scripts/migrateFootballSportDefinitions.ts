@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-
 import { connectDB } from '../config/db';
 import { DeptChart } from '../core/features/deptChart/deptChart.model';
 import { Team } from '../core/features/team/team.model';
@@ -10,6 +9,7 @@ import {
   resolvePositionIds,
   UnsupportedSportError,
 } from '../core/features/sports/sport.registry';
+import { logger } from '../core/shared/utils/logger';
 
 const SPORT_ID = 'football';
 const VARIANT_ID = 'tackle-11';
@@ -66,8 +66,9 @@ const migrate = async () => {
           throw error;
         }
 
-        console.warn(
-          `Skipped unsupported positions for member ${member._id.toString()}: ${error.message}`,
+        logger.warn(
+          { memberId: member._id.toString(), error: error.message },
+          'Skipped unsupported positions for member',
         );
       }
     }
@@ -106,12 +107,12 @@ const migrate = async () => {
     }
   }
 
-  console.info(`Migrated ${teams.length} football teams.`);
+  logger.info({ teamCount: teams.length }, 'Migrated football teams');
 };
 
 migrate()
   .catch((error) => {
-    console.error(error);
+    logger.error({ error }, 'Football sport definitions migration failed');
     process.exitCode = 1;
   })
   .finally(async () => {

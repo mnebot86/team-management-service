@@ -1,4 +1,3 @@
-import { Team } from "./../team/team.model";
 import { Types } from 'mongoose';
 import { TeamRole } from '../teamMember/teamMember.modal';
 

@@ -1,9 +1,8 @@
 import mongoose, { Types } from 'mongoose';
 import { Response } from 'express';
-
 import * as teamService from './team.service';
-import * as teamMemberService from '../teamMember/teamMember.service'
-import * as userProfileService from '../userProfile/userProfile.service'
+import * as teamMemberService from '../teamMember/teamMember.service';
+import * as userProfileService from '../userProfile/userProfile.service';
 import { StatusCodes } from 'http-status-codes';
 import { sendSuccess, sendError } from '../../shared/utils/response';
 import { CreateTeamDto } from './team.dto';
@@ -258,7 +257,7 @@ export const getActiveTeamsCount = async (req: AuthRequest, res: Response) => {
   try {
     const teams = await teamMemberService.getTeamsForUser(new mongoose.Types.ObjectId(req.user.profileId));
 
-    const activeTeamsCount = teams.filter((team) => team.isActive).length;
+    const activeTeamsCount = teams.filter((team) => team.teamId.active).length;
 
     return sendSuccess(res, StatusCodes.OK, { count: activeTeamsCount }, 'Active teams count fetched successfully');
   } catch (error) {

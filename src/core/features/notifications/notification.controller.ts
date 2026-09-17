@@ -1,7 +1,6 @@
 import { StatusCodes } from 'http-status-codes';
 import { Response } from 'express';
 import { Types } from 'mongoose';
-
 import { sendError, sendSuccess } from '../../shared/utils/response';
 import { AuthRequest } from '../team/team.types';
 import {
@@ -44,6 +43,7 @@ export const getNotifications = async (
 
     if (!profileId) {
       sendError(res, StatusCodes.NOT_FOUND, 'User profile not found');
+
       return;
     }
 
@@ -72,6 +72,7 @@ export const getUnreadCount = async (
 
   if (!profileId) {
     sendError(res, StatusCodes.NOT_FOUND, 'User profile not found');
+
     return;
   }
 
@@ -88,6 +89,7 @@ export const markRead = async (
 
   if (!profileId || !Types.ObjectId.isValid(notificationId)) {
     sendError(res, StatusCodes.BAD_REQUEST, 'Invalid notification or profile');
+
     return;
   }
 
@@ -95,6 +97,7 @@ export const markRead = async (
 
   if (!notification) {
     sendError(res, StatusCodes.NOT_FOUND, 'Notification not found');
+
     return;
   }
 
@@ -114,6 +117,7 @@ export const markAllRead = async (
 
   if (!profileId) {
     sendError(res, StatusCodes.NOT_FOUND, 'User profile not found');
+
     return;
   }
 

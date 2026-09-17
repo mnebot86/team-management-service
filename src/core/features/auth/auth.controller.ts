@@ -64,7 +64,6 @@ export const register = async (req: Request, res: Response) => {
   }
 };
 
-
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
@@ -124,7 +123,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
   }
 
   try {
-    const results = await authService.forgotPassword({ email: emailTrimmed });
+    await authService.forgotPassword({ email: emailTrimmed });
 
     return sendSuccess(
       res,
@@ -217,7 +216,8 @@ export const getMe = async (req: AuthRequest, res: Response) => {
     const results = {
       user: userProfile.userId,
       profile: userProfile.profileId,
-    }
+    };
+
     return sendSuccess(res, StatusCodes.OK, results, 'Session restored');
   } catch (error) {
     return sendError(

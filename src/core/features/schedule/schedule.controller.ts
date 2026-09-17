@@ -1,7 +1,6 @@
 import { Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { Types } from 'mongoose';
-
 import * as scheduleService from './schedule.service';
 import { ScheduleDocument } from './schedule.model';
 import { sendError, sendSuccess } from '../../shared/utils/response';
@@ -20,11 +19,13 @@ const notifyScheduleCreated = async (
   teamId: string,
   schedule: Awaited<ReturnType<typeof scheduleService.createSchedule>>,
 ): Promise<void> => {
-  const type = schedule.type === 'practice'
-    ? NOTIFICATION_TYPES.PRACTICE_CREATED
-    : schedule.type === 'game'
-      ? NOTIFICATION_TYPES.GAME_CREATED
-      : null;
+  let type = null;
+
+  if (schedule.type === 'practice') {
+    type = NOTIFICATION_TYPES.PRACTICE_CREATED;
+  } else if (schedule.type === 'game') {
+    type = NOTIFICATION_TYPES.GAME_CREATED;
+  }
 
   if (!type) {
     return;

@@ -1,7 +1,6 @@
 import { Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { Error as MongooseError, Types } from 'mongoose';
-
 import { sendError, sendSuccess } from '../../shared/utils/response';
 import { AuthRequest } from '../team/team.types';
 import { TeamMember } from '../teamMember/teamMember.modal';
@@ -66,21 +65,25 @@ export const createDeptChartController = async (
 
   if (!teamId || !Types.ObjectId.isValid(teamId as string)) {
     sendError(res, StatusCodes.BAD_REQUEST, 'A valid team id is required.');
+
     return;
   }
 
   if (!profileId || !Types.ObjectId.isValid(profileId)) {
     sendError(res, StatusCodes.UNAUTHORIZED, 'An authenticated profile is required.');
+
     return;
   }
 
   if (typeof name !== 'string' || !name.trim()) {
     sendError(res, StatusCodes.BAD_REQUEST, 'Dept chart name is required.');
+
     return;
   }
 
   if (positions !== undefined && !Array.isArray(positions)) {
     sendError(res, StatusCodes.BAD_REQUEST, 'Positions must be an array.');
+
     return;
   }
 
@@ -112,11 +115,13 @@ export const createDeptChartController = async (
         StatusCodes.CONFLICT,
         'A dept chart with this name already exists for the team.',
       );
+
       return;
     }
 
     if (error instanceof MongooseError.ValidationError) {
       sendError(res, StatusCodes.BAD_REQUEST, error.message);
+
       return;
     }
 
@@ -136,6 +141,7 @@ export const getDeptChartFiltersController = async (
 
   if (!teamId || !Types.ObjectId.isValid(teamId as string)) {
     sendError(res, StatusCodes.BAD_REQUEST, 'A valid team id is required.');
+
     return;
   }
 
@@ -166,11 +172,13 @@ export const getDeptChartsController = async (
 
   if (!teamId || !Types.ObjectId.isValid(teamId as string)) {
     sendError(res, StatusCodes.BAD_REQUEST, 'A valid team id is required.');
+
     return;
   }
 
   if (name !== undefined && typeof name !== 'string') {
     sendError(res, StatusCodes.BAD_REQUEST, 'Name must be a string.');
+
     return;
   }
 
@@ -178,6 +186,7 @@ export const getDeptChartsController = async (
 
   if (name !== undefined && !normalizedName) {
     sendError(res, StatusCodes.BAD_REQUEST, 'Name cannot be empty.');
+
     return;
   }
 
@@ -211,11 +220,13 @@ export const updateDeptChartController = async (
 
   if (!deptChartId || !Types.ObjectId.isValid(deptChartId as string)) {
     sendError(res, StatusCodes.BAD_REQUEST, 'A valid dept chart id is required.');
+
     return;
   }
 
   if (name !== undefined && (typeof name !== 'string' || !name.trim())) {
     sendError(res, StatusCodes.BAD_REQUEST, 'Dept chart name cannot be empty.');
+
     return;
   }
 
@@ -224,6 +235,7 @@ export const updateDeptChartController = async (
   for (const [field, value] of Object.entries(arrayFields)) {
     if (value !== undefined && !Array.isArray(value)) {
       sendError(res, StatusCodes.BAD_REQUEST, `${field} must be an array.`);
+
       return;
     }
   }
@@ -235,6 +247,7 @@ export const updateDeptChartController = async (
     && removePlayers === undefined
   ) {
     sendError(res, StatusCodes.BAD_REQUEST, 'No updates were provided.');
+
     return;
   }
 
@@ -248,6 +261,7 @@ export const updateDeptChartController = async (
 
     if (!deptChart) {
       sendError(res, StatusCodes.NOT_FOUND, 'Dept chart not found.');
+
       return;
     }
 
@@ -271,6 +285,7 @@ export const updateDeptChartController = async (
         StatusCodes.CONFLICT,
         'A dept chart with this name already exists for the team.',
       );
+
       return;
     }
 
@@ -280,6 +295,7 @@ export const updateDeptChartController = async (
       || error instanceof MongooseError.CastError
     ) {
       sendError(res, StatusCodes.BAD_REQUEST, error.message);
+
       return;
     }
 
@@ -299,6 +315,7 @@ export const deleteDeptChartController = async (
 
   if (!deptChartId || !Types.ObjectId.isValid(deptChartId as string)) {
     sendError(res, StatusCodes.BAD_REQUEST, 'A valid dept chart id is required.');
+
     return;
   }
 
@@ -307,6 +324,7 @@ export const deleteDeptChartController = async (
 
     if (!deptChart) {
       sendError(res, StatusCodes.NOT_FOUND, 'Dept chart not found.');
+
       return;
     }
 

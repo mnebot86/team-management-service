@@ -30,7 +30,7 @@ export const createProfileForUserHandler = async (req: AuthRequest, res: Respons
   try {
     const userId = toObjectId(req.user.id);
 
-    const profilePayload: any = {
+    const profilePayload: Parameters<typeof createProfileForUser>[0] = {
       userId,
       firstName: firstName.trim(),
       lastName: lastName?.trim(),

@@ -5,7 +5,6 @@ import { AuthRequest } from "../team/team.types";
 import { Response } from 'express';
 import ROLES from "../../constants/roles";
 import { createCode, getTeamInviteCode, joinTeamWithInviteCode, updateCodeStatus } from "./invite.services";
-import { createNotification } from "../notifications/notification.service";
 
 export const createInviteCode = async (req: AuthRequest, res: Response): Promise<void> => {
   const userId = req.user!.id;
@@ -17,7 +16,8 @@ export const createInviteCode = async (req: AuthRequest, res: Response): Promise
 
   if (!team) {
     sendError(res, StatusCodes.NOT_FOUND, `Team with ID: ${teamId} does not exist`);
-    return
+
+    return;
   }
 
   const validRoles = Object.values(ROLES);
@@ -29,7 +29,7 @@ export const createInviteCode = async (req: AuthRequest, res: Response): Promise
       'Submitted role does not exist',
     );
 
-    return
+    return;
   }
 
   const payload = {
@@ -39,7 +39,6 @@ export const createInviteCode = async (req: AuthRequest, res: Response): Promise
     maxUses: maxUses ?? 0,
     expiresAt: expiresAt ?? null,
   };
-
 
   try {
     const inviteCode = await createCode(payload);
@@ -67,6 +66,7 @@ export const getVisitCodes = async (
         StatusCodes.NOT_FOUND,
         `Team with ID: ${teamId} does not exist`,
       );
+
       return;
     }
 
@@ -96,7 +96,7 @@ export const toggleCodeStatus = async (
   req: AuthRequest,
   res: Response,
 ): Promise<void> => {
-  const { codeId } = req.params
+  const { codeId } = req.params;
 
   if (!codeId) {
     sendError(
@@ -134,7 +134,7 @@ export const toggleCodeStatus = async (
       message,
     );
   }
-}
+};
 
 export const joinTeam = async (
   req: AuthRequest,

@@ -6,11 +6,12 @@ import {
   addTeamMember,
   getTeamMembersCount,
   getTeamMemberById,
-  updateTeamMember
+  updateTeamMember,
 } from './teamMember.service';
 import { AuthRequest } from '../team/team.types';
 import { uploadUserProfileImage } from '../imageUploader/imageUploader.service';
 import { createProfile, updateProfile } from '../profile/profile.service';
+import { ProfileDocument } from '../profile/profile.model';
 import { sendError, sendSuccess } from '../../shared/utils/response';
 import { logger } from '../../shared/utils/logger';
 import { TEAM_ROLES, TeamRole } from './teamMember.modal';
@@ -130,7 +131,7 @@ export const getRoster = async (req: Request, res: Response) => {
       });
 
     return sendSuccess(res, StatusCodes.OK, modifiedMembers, 'Team roster fetched successfully');
-  } catch (error) {
+  } catch {
     return sendError(
       res,
       StatusCodes.INTERNAL_SERVER_ERROR,
@@ -266,9 +267,10 @@ export const getTeamMember = async (req: AuthRequest, res: Response) => {
 
     const team = await Team.findById(teamId).select('sportId sportVariantId');
     const positionIds = member.positionIds ?? [];
+    const profile = member.profileId as unknown as ProfileDocument;
     const modifiedMember = {
-      firstName: (member.profileId as any).firstName,
-      lastName: (member.profileId as any).lastName,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
       role: member.role,
       jerseyNumber: member.jerseyNumber,
       positionIds,
@@ -279,12 +281,12 @@ export const getTeamMember = async (req: AuthRequest, res: Response) => {
           positionIds,
         )
         : member.positions,
-      avatar: (member.profileId as any).avatar?.url || null,
-      avatarPublicId: (member.profileId as any).avatar?.publicId || null,
-      isClaimed: (member.profileId as any).isClaimed,
+      avatar: profile.avatar?.url || null,
+      avatarPublicId: profile.avatar?.publicId || null,
+      isClaimed: profile.isClaimed,
       createdAt: member.createdAt,
       updatedAt: member.updatedAt,
-    }
+    };
 
     return sendSuccess(res, StatusCodes.OK, modifiedMember, 'Fetched team member successfully');
   } catch (error) {

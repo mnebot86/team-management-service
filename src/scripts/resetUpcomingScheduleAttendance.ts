@@ -2,7 +2,6 @@ import mongoose from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
-
 import { connectDB } from '../config/db';
 import { Schedule } from '../core/features/schedule/schedule.model';
 import { logger } from '../core/shared/utils/logger';

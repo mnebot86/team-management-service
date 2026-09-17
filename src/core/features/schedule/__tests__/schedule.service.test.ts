@@ -1,5 +1,4 @@
 import { Types } from 'mongoose';
-
 import {
   cancelSchedule,
   getLastPractice,

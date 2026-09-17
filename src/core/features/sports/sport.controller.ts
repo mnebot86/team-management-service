@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
-
 import { sendError, sendSuccess } from '../../shared/utils/response';
 import { getSport, getSports } from './sport.registry';
 

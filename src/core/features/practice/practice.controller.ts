@@ -16,11 +16,13 @@ export const createPracticePlanController = async (req: AuthRequest, res: Respon
 
     if (!teamId) {
       sendError(res, StatusCodes.BAD_REQUEST, 'Team id is required.');
+
       return;
     }
 
     if (!userId) {
       sendError(res, StatusCodes.UNAUTHORIZED, 'Unauthorized');
+
       return;
     }
 
@@ -47,6 +49,7 @@ export const getPracticePlansByTeamIdController = async (
 
     if (!teamId) {
       sendError(res, StatusCodes.BAD_REQUEST, 'Team id is required.');
+
       return;
     }
 
@@ -78,11 +81,13 @@ export const updatePracticePlanController = async (
 
     if (!planId) {
       sendError(res, StatusCodes.BAD_REQUEST, 'Practice plan id is required.');
+
       return;
     }
 
     if (!userId) {
       sendError(res, StatusCodes.UNAUTHORIZED, 'Unauthorized');
+
       return;
     }
 
@@ -96,6 +101,7 @@ export const updatePracticePlanController = async (
 
     if (!practicePlan) {
       sendError(res, StatusCodes.NOT_FOUND, 'Practice plan not found.');
+
       return;
     }
 
@@ -125,11 +131,13 @@ export const deletePracticePlanController = async (
 
     if (!planId) {
       sendError(res, StatusCodes.BAD_REQUEST, 'Practice plan id is required.');
+
       return;
     }
 
     if (!userId) {
       sendError(res, StatusCodes.UNAUTHORIZED, 'Unauthorized');
+
       return;
     }
 
@@ -137,6 +145,7 @@ export const deletePracticePlanController = async (
 
     if (!deleted) {
       sendError(res, StatusCodes.NOT_FOUND, 'Practice plan not found.');
+
       return;
     }
 

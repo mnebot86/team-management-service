@@ -1,6 +1,5 @@
 import { Server as HttpServer } from 'http';
 import { Server } from 'socket.io';
-
 import { socketAuth } from './auth';
 import { logger } from '../shared/utils/logger';
 import { TeamMember } from '../features/teamMember/teamMember.modal';

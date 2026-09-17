@@ -3,11 +3,10 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { logger } from './core/shared/utils/logger';
-
 // routes
 import authRoutes from './core/features/auth/auth.routers';
-import inviteRoutes from './core/features/invites/routers'
-import teamRoutes from './core/features/team/team.routers'
+import inviteRoutes from './core/features/invites/routers';
+import teamRoutes from './core/features/team/team.routers';
 import teamMember from './core/features/teamMember/teamMember.routers';
 import profileRoutes from './core/features/profile/profile.routers';
 import scheduleRoutes from './core/features/schedule/schedule.router';
@@ -15,7 +14,6 @@ import practiceRoutes from './core/features/practice/practice.routers';
 import notificationRoutes from './core/features/notifications/notification.routers';
 import deptChartRoutes from './core/features/deptChart/deptChart.routers';
 import sportRoutes from './core/features/sports/sport.routers';
-
 // middleware
 import { errorMiddleware } from './core/middleware/error.middleware';
 import { protect } from './core/middleware/auth.middleware';
@@ -23,7 +21,7 @@ import { protect } from './core/middleware/auth.middleware';
 const app = express();
 
 // global middleware
-app.use(helmet())
+app.use(helmet());
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 

@@ -25,7 +25,7 @@ describe('Team API - Create Team', () => {
       .post('/api/v1/auth/register')
       .send({
         email: 'test-create@example.com',
-        password: 'Password1!'
+        password: 'Password1!',
       });
 
     token = res.body.data.token;
@@ -83,7 +83,7 @@ describe('Team API - Create Team', () => {
     expect(response.body.success).toBe(false);
     expect(response.body.message).toMatch(/name/i);
   });
-})
+});
 
 describe('Team API - Get Team', () => {
   let createdTeamId: string;
@@ -101,7 +101,7 @@ describe('Team API - Get Team', () => {
       .post('/api/v1/auth/register')
       .send({
         email: 'test-get@example.com',
-        password: 'Password1!'
+        password: 'Password1!',
       });
 
     token = authRes.body.data.token;
@@ -163,7 +163,7 @@ describe('Team API - Get Teams (List)', () => {
       .post('/api/v1/auth/register')
       .send({
         email: 'test-list@example.com',
-        password: 'Password1!'
+        password: 'Password1!',
       });
 
     token = authRes.body.data.token;
@@ -218,7 +218,7 @@ describe('Team API - Update & Delete Team', () => {
       .post('/api/v1/auth/register')
       .send({
         email: `test-update-${Date.now()}@example.com`,
-        password: 'Password1!'
+        password: 'Password1!',
       });
 
     token = authRes.body.data.token;

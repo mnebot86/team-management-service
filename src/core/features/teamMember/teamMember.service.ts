@@ -3,6 +3,7 @@ import { TEAM_ROLES, TeamMember, TeamMemberDocument, TeamRole } from './teamMemb
 import { NOTIFICATION_TYPES } from '../notifications/notification.model';
 import { createNotification } from '../notifications/notification.service';
 import { joinProfileSocketsToTeam } from '../../socket/socket';
+import { ITeam } from '../team/team.types';
 
 export const addTeamMember = async (
   teamId: Types.ObjectId,
@@ -73,13 +74,14 @@ export const getTeamRole = async (
   profileId: Types.ObjectId
 ): Promise<TeamRole | null> => {
   const member = await TeamMember.findOne({ teamId, profileId });
+
   return member ? member.role : null;
 };
 
 export const getTeamsForUser = async (
   profileId: Types.ObjectId
-): Promise<any[]> => {
-  return TeamMember.find({ profileId }).populate('teamId');
+): Promise<Array<Omit<TeamMemberDocument, 'teamId'> & { teamId: ITeam }>> => {
+  return TeamMember.find({ profileId }).populate<{ teamId: ITeam }>('teamId');
 };
 
 export const removeTeamMember = async (
@@ -102,7 +104,7 @@ export const updateTeamMemberRole = async (
 };
 
 export const getTeamsForProfile = async (profileId: Types.ObjectId) => {
-  return TeamMember.find({ profileId })
+  return TeamMember.find({ profileId });
 };
 
 export const getTeamMembersCount = async (teamId: Types.ObjectId): Promise<number> => {
@@ -122,4 +124,4 @@ export const updateTeamMember = async (
   updateData: Partial<TeamMemberDocument>,
 ): Promise<TeamMemberDocument | null> => {
   return TeamMember.findOneAndUpdate({ teamId, profileId }, updateData, { new: true });
-}
+};

@@ -1,10 +1,9 @@
 import { Types } from 'mongoose';
-
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
-
 import { Schedule, ScheduleDocument } from './schedule.model';
+import { logger } from '../../shared/utils/logger';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -568,15 +567,15 @@ export const getPlayerAttendance = async (
       }
 
       switch (record.status) {
-        case 'present':
-          present += 1;
-          break;
-        case 'late':
-          late += 1;
-          break;
-        case 'absent':
-          absent += 1;
-          break;
+      case 'present':
+        present += 1;
+        break;
+      case 'late':
+        late += 1;
+        break;
+      case 'absent':
+        absent += 1;
+        break;
       }
     });
   });
@@ -671,7 +670,7 @@ export const getTeamAttendanceStats = async (
     startDate: { $lte: endOfToday },
   });
 
-  console.log('Schedules for team attendance stats:', schedules.length);
+  logger.info({ scheduleCount: schedules.length }, 'Schedules for team attendance stats');
 
   let present = 0;
   let late = 0;
@@ -680,25 +679,25 @@ export const getTeamAttendanceStats = async (
   schedules.forEach((schedule) => {
     schedule.attendance?.forEach(({ status }) => {
       switch (status) {
-        case 'present':
-          present += 1;
-          break;
-        case 'late':
-          late += 1;
-          break;
-        case 'absent':
-          absent += 1;
-          break;
+      case 'present':
+        present += 1;
+        break;
+      case 'late':
+        late += 1;
+        break;
+      case 'absent':
+        absent += 1;
+        break;
       }
     });
   });
 
-  console.log('Attendance stats calculated:', {
+  logger.info({
     present,
     late,
     absent,
     total: schedules.length,
-  });
+  }, 'Attendance stats calculated');
 
   return {
     present,
