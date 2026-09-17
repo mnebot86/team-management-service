@@ -585,7 +585,7 @@ export const getPlayerAttendance = async (
     present,
     late,
     absent,
-    total: present + late + absent,
+    total: schedules.length,
   };
 };
 
@@ -645,6 +645,66 @@ export const getTeamGameStats = async (
     losses,
     totalGames,
     winRate: totalGames === 0 ? 0 : (wins / totalGames) * 100,
+  };
+};
+
+export interface TeamAttendanceStats {
+  present: number;
+  late: number;
+  absent: number;
+  total: number;
+}
+
+export const getTeamAttendanceStats = async (
+  teamId: Types.ObjectId,
+): Promise<TeamAttendanceStats> => {
+  const now = new Date();
+  const endOfToday = dayjs(now)
+    .tz(scheduleTimezone)
+    .endOf('day')
+    .toDate();
+
+  const schedules = await Schedule.find({
+    teamId,
+    type: 'practice',
+    status: { $ne: 'cancelled' },
+    startDate: { $lte: endOfToday },
+  });
+
+  console.log('Schedules for team attendance stats:', schedules.length);
+
+  let present = 0;
+  let late = 0;
+  let absent = 0;
+
+  schedules.forEach((schedule) => {
+    schedule.attendance?.forEach(({ status }) => {
+      switch (status) {
+        case 'present':
+          present += 1;
+          break;
+        case 'late':
+          late += 1;
+          break;
+        case 'absent':
+          absent += 1;
+          break;
+      }
+    });
+  });
+
+  console.log('Attendance stats calculated:', {
+    present,
+    late,
+    absent,
+    total: schedules.length,
+  });
+
+  return {
+    present,
+    late,
+    absent,
+    total: schedules.length,
   };
 };
 

@@ -4,7 +4,9 @@ import {
   cancelSchedule,
   getLastPractice,
   getNextPractice,
+  getPlayerAttendance,
   getTeamSchedule,
+  getTeamAttendanceStats,
   getTeamGameStats,
   updateSchedule,
 } from '../schedule.service';
@@ -358,6 +360,66 @@ describe('schedule service', () => {
       type: 'game',
       status: { $ne: 'cancelled' },
       gameOutCome: { $in: ['win', 'loss', 'tie'] },
+    });
+  });
+
+  it('calculates overall team attendance statistics', async () => {
+    const teamId = new Types.ObjectId();
+    (Schedule.find as jest.Mock).mockResolvedValueOnce([
+      {
+        type: 'practice',
+        startDate: new Date('2026-08-10T04:00:00.000Z'),
+        startTime: new Date('2026-08-10T09:00:00.000Z'),
+        attendance: [
+          { status: 'present' },
+          { status: 'late' },
+        ],
+      },
+      {
+        type: 'practice',
+        startDate: new Date('2026-08-09T04:00:00.000Z'),
+        startTime: new Date('2026-08-09T09:00:00.000Z'),
+        attendance: [
+          { status: 'present' },
+          { status: 'absent' },
+          { status: 'absent' },
+        ],
+      },
+    ]);
+
+    await expect(getTeamAttendanceStats(teamId)).resolves.toEqual({
+      present: 2,
+      late: 1,
+      absent: 2,
+      total: 2,
+    });
+    expect(Schedule.find).toHaveBeenCalledWith({
+      teamId,
+      type: 'practice',
+      status: { $ne: 'cancelled' },
+      startDate: { $lte: expect.any(Date) },
+    });
+  });
+
+  it('uses the number of practices for player attendance total', async () => {
+    const profileId = new Types.ObjectId();
+    (Schedule.find as jest.Mock).mockResolvedValueOnce([
+      {
+        attendance: [{ profileId, status: 'present' }],
+      },
+      {
+        attendance: [
+          { profileId, status: 'absent' },
+          { profileId, status: 'late' },
+        ],
+      },
+    ]);
+
+    await expect(getPlayerAttendance(profileId)).resolves.toEqual({
+      present: 1,
+      late: 1,
+      absent: 1,
+      total: 2,
     });
   });
 

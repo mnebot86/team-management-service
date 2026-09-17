@@ -512,6 +512,38 @@ export const getTeamGameStats = async (
   }
 };
 
+export const getTeamAttendanceStats = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<Response> => {
+  const { teamId } = req.params;
+
+  if (!teamId || !Types.ObjectId.isValid(teamId as string)) {
+    return sendError(res, StatusCodes.BAD_REQUEST, 'Invalid team ID');
+  }
+
+  try {
+    const attendance = await scheduleService.getTeamAttendanceStats(
+      new Types.ObjectId(teamId as string),
+    );
+
+    return sendSuccess(
+      res,
+      StatusCodes.OK,
+      attendance,
+      'Team attendance statistics retrieved successfully',
+    );
+  } catch (error) {
+    logger.error({ error }, 'Error retrieving team attendance statistics');
+
+    return sendError(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      'Failed to retrieve team attendance statistics',
+    );
+  }
+};
+
 export const updateAttendance = async (
   req: AuthRequest,
   res: Response,
