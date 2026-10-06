@@ -59,6 +59,9 @@ export const createSchedule = async (
     eventType,
     opponentName,
     isHomeGame,
+    gameOutcome,
+    homeScore,
+    awayScore,
     startDate,
     startTime,
     endTime,
@@ -88,6 +91,9 @@ export const createSchedule = async (
       type: eventType,
       opponentName,
       isHomeGame,
+      gameOutcome,
+      homeScore,
+      awayScore,
       startDate,
       startTime,
       endTime,
@@ -183,7 +189,7 @@ export const updateSchedule = async (
           zip: zipCode,
         },
         recurrence,
-        gameOutCome: gameOutcome,
+        gameOutCome: gameOutcome === 'draw' ? 'tie' : gameOutcome,
         scores: {
           homeTeamScore: homeScore,
           awayTeamScore: awayScore,
@@ -665,4 +671,3 @@ export const getPlayerAttendance = async (
     );
   }
 };
-

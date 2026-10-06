@@ -159,6 +159,30 @@ describe('schedule service', () => {
     ]);
   });
 
+  it('maps the stored tie outcome to the public draw contract', async () => {
+    const teamId = new Types.ObjectId();
+    const sortMock = jest.fn().mockResolvedValueOnce([
+      {
+        _id: new Types.ObjectId(),
+        teamId,
+        title: 'Drawn game',
+        type: 'game',
+        startDate: new Date('2026-08-12T12:00:00.000Z'),
+        startTime: new Date('2026-08-12T12:00:00.000Z'),
+        gameOutCome: 'tie',
+        scores: { homeTeamScore: 14, awayTeamScore: 14 },
+        location: {},
+      },
+    ]);
+    (Schedule.find as jest.Mock).mockReturnValueOnce({ sort: sortMock });
+
+    const sections = await getTeamSchedule(teamId);
+
+    expect(sections.flatMap(section => section.data)).toEqual([
+      expect.objectContaining({ gameOutcome: 'draw' }),
+    ]);
+  });
+
   it('returns a materialized recurring occurrence scheduled for today', async () => {
     // This is August 11 in New York, but already August 12 in UTC.
     jest.setSystemTime(new Date('2026-08-12T01:00:00.000Z'));
@@ -344,7 +368,8 @@ describe('schedule service', () => {
     await expect(getTeamGameStats(teamId)).resolves.toEqual({
       wins: 2,
       losses: 1,
-      totalGames: 4,
+      draws: 1,
+      total: 4,
       winRate: 50,
     });
     expect(Schedule.find).toHaveBeenCalledWith({
