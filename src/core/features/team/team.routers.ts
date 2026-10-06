@@ -7,10 +7,11 @@ import { canUpdateTeam, canDeleteTeam } from './team.permissions';
 const router = Router();
 
 router.post('/', teamController.createTeam);
+router.post('/join', inviteController.joinTeam);
 
 router.get('/', teamController.getTeams);
-router.get('/:teamId', teamController.getTeam);
 router.get('/active-team-count', teamController.getActiveTeamsCount);
+router.get('/:teamId', teamController.getTeam);
 
 router.patch(
   '/:teamId',
@@ -26,6 +27,5 @@ router.delete(
 // Invites Routes
 router.post('/:teamId/invites', inviteController.createInviteCode);
 router.get('/:teamId/invites', inviteController.getVisitCodes);
-router.post('/join', inviteController.joinTeam);
 
 export default router;

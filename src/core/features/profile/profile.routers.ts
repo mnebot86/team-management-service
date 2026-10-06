@@ -13,9 +13,9 @@ const router = Router();
 
 router.post('/', upload.single('avatar'), createProfileForUserHandler);
 router.post('/coach', upload.single('avatar'), createProfileByCoachHandler);
-router.get('/', getProfilesByCreatorHandler);
-router.get('/:id', getProfileByIdHandler);
 router.post('/link', linkProfileHandler);
+router.get('/', getProfilesByCreatorHandler);
 router.get('/search', searchProfilesHandler);
+router.get('/:id', getProfileByIdHandler);
 
 export default router;

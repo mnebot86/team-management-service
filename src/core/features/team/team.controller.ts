@@ -255,7 +255,22 @@ export const getActiveTeamsCount = async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const teams = await teamMemberService.getTeamsForUser(new mongoose.Types.ObjectId(req.user.profileId));
+    const [userProfile] = await userProfileService.getUserProfiles(
+      new Types.ObjectId(req.user.id),
+    );
+
+    if (!userProfile) {
+      return sendSuccess(
+        res,
+        StatusCodes.OK,
+        { count: 0 },
+        'Active teams count fetched successfully',
+      );
+    }
+
+    const teams = await teamMemberService.getTeamsForUser(
+      new Types.ObjectId(userProfile.profileId),
+    );
 
     const activeTeamsCount = teams.filter((team) => team.teamId.active).length;
 
