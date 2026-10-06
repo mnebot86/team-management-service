@@ -8,6 +8,8 @@ const tsJestTransformCfg = createDefaultPreset().transform;
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
+  globalSetup: "<rootDir>/src/core/tests/globalSetup.ts",
+  globalTeardown: "<rootDir>/src/core/tests/globalTeardown.ts",
   roots: ["<rootDir>/src/"],
   transform: {
     ...tsJestTransformCfg,

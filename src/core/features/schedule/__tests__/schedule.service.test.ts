@@ -35,10 +35,6 @@ describe('schedule service', () => {
   });
 
   it('puts today events into the Today section when they start later today', async () => {
-    const now = new Date();
-    const todayStart = new Date(now);
-    todayStart.setHours(now.getHours() + 2, 0, 0, 0);
-
     const teamId = new Types.ObjectId();
 
     const sortMock = jest.fn().mockResolvedValueOnce([
@@ -50,8 +46,8 @@ describe('schedule service', () => {
         type: 'practice',
         opponentName: null,
         isHomeGame: true,
-        startDate: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
-        startTime: todayStart,
+        startDate: new Date('2026-08-10T04:00:00.000Z'),
+        startTime: new Date('2026-08-10T12:00:00.000Z'),
         endTime: null,
         location: {},
         recurrence: { isRecurring: false },
@@ -68,9 +64,6 @@ describe('schedule service', () => {
   });
 
   it('keeps events visible in Today after their start time has passed', async () => {
-    const now = new Date();
-    const earlierToday = new Date(now);
-    earlierToday.setHours(now.getHours() - 2, 0, 0, 0);
     const teamId = new Types.ObjectId();
     const sortMock = jest.fn().mockResolvedValueOnce([
       {
@@ -81,8 +74,8 @@ describe('schedule service', () => {
         type: 'practice',
         opponentName: null,
         isHomeGame: null,
-        startDate: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
-        startTime: earlierToday,
+        startDate: new Date('2026-08-10T04:00:00.000Z'),
+        startTime: new Date('2026-08-10T08:00:00.000Z'),
         endTime: null,
         status: 'scheduled',
         location: {},

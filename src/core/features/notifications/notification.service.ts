@@ -1,7 +1,7 @@
 import Notification, {
   NotificationType,
 } from './notification.model';
-import { getSocket } from '../../socket/socket';
+import { getSocketOrNull } from '../../socket/socket';
 
 export type CreateNotificationPayload = {
   recipients: {
@@ -22,7 +22,11 @@ export const createNotification = async (
 ) => {
   const notification = await Notification.create(payload);
 
-  const socket = getSocket();
+  const socket = getSocketOrNull();
+
+  if (!socket) {
+    return notification;
+  }
 
   for (const recipient of payload.recipients) {
     const room = `profile:${recipient.profileId}`;

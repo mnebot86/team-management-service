@@ -47,19 +47,27 @@ tests/
 ### 1. Install dependencies
 
 ```bash
-npm install
+corepack enable
+yarn install --immutable
 ```
 
 ---
 
 ### 2. Set up environment variables
 
-Create a `.env` file:
+Create `.env.development` with the required application and integration values:
 
 ```env
 MONGO_URI=your_mongo_uri
-PORT=5000
+PORT=5001
 NODE_ENV=development
+JWT_SECRET=your_jwt_secret
+APP_URL=http://localhost:8081/
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_SECRET_KEY=your_cloudinary_secret
+CLOUDINARY_URL=your_cloudinary_url
+RESEND_API_KEY=your_resend_api_key
 ```
 
 ---
@@ -75,7 +83,7 @@ npm run dev
 ### 4. Health Check
 
 ```
-GET http://localhost:5000/health
+GET http://localhost:5001/health
 ```
 
 Response:
@@ -91,8 +99,18 @@ Response:
 ## 🧪 Running Tests
 
 ```bash
-npm run test
+npm test
 ```
+
+Jest starts a disposable in-memory MongoDB and supplies test-only values for
+JWT, application URL, Cloudinary, and Resend configuration before application
+modules load. Test values take precedence over local environment files, so the
+suite cannot connect to development, staging, or production services. The first
+run downloads the MongoDB test binary and caches it for
+later runs.
+
+CI installs dependencies with `yarn install --immutable` and runs the same
+`npm test` command.
 
 ---
 
