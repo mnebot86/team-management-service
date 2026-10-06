@@ -9,7 +9,10 @@ const envFileMap: Record<string, string> = {
 
 const envFile = envFileMap[process.env.NODE_ENV || 'development'] || '.env.development';
 
-dotenv.config({ path: envFile });
+dotenv.config({
+  path: envFile,
+  quiet: process.env.NODE_ENV === 'test',
+});
 
 const requiredEnv = (key: string): string => {
   const value = process.env[key];

@@ -7,7 +7,6 @@ import { MONGO_ERRORS } from '../../constants/mongoErrors';
 import { REGEX } from '../../constants/regex';
 import { validateWithRegex } from '../../shared/utils/regexValidator';
 import { logger } from '../../shared/utils/logger';
-import { MongoServerError } from 'mongodb';
 import { validatePassword } from '../../shared/utils/passwordValidator';
 import { AuthRequest } from '../team/team.types';
 import mongoose from 'mongoose';
@@ -48,8 +47,10 @@ export const register = async (req: Request, res: Response) => {
 
     return sendSuccess(res, StatusCodes.CREATED, user, 'User registered successfully');
   } catch (error: unknown) {
-    if (error instanceof MongoServerError && error.code === MONGO_ERRORS.DUPLICATE_KEY) {
-      const fields = error.keyValue ? Object.keys(error.keyValue).join(', ') : 'field';
+    const mongoError = error as { code?: number; keyValue?: Record<string, unknown> };
+
+    if (mongoError.code === MONGO_ERRORS.DUPLICATE_KEY) {
+      const fields = mongoError.keyValue ? Object.keys(mongoError.keyValue).join(', ') : 'field';
 
       return sendError(
         res,
