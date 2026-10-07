@@ -36,6 +36,9 @@ interface CreateScheduleInput {
   type: string;
   opponentName?: string | null;
   isHomeGame?: boolean | null;
+  gameOutcome?: 'pending' | 'win' | 'loss' | 'draw' | null;
+  homeScore?: number | null;
+  awayScore?: number | null;
   startDate: Date | string;
   startTime?: Date | string | null;
   endTime?: Date | string | null;
@@ -94,6 +97,11 @@ export const createSchedule = async (
     type: input.type,
     opponentName: input.opponentName ?? null,
     isHomeGame: input.isHomeGame ?? null,
+    gameOutCome: input.gameOutcome === 'draw' ? 'tie' : input.gameOutcome,
+    scores: {
+      homeTeamScore: input.homeScore ?? null,
+      awayTeamScore: input.awayScore ?? null,
+    },
     startDate: input.startDate,
     startTime: input.startTime ?? null,
     endTime: input.endTime ?? null,
@@ -308,6 +316,7 @@ interface ScheduleSection {
 
 interface ScheduleOccurrence {
   scheduleId: string;
+  recurrenceGroupId?: string | null;
   recurrenceDate: Date;
   title: string;
   description?: string;
@@ -321,7 +330,7 @@ interface ScheduleOccurrence {
   status: 'scheduled' | 'cancelled';
   cancellationReason?: string | null;
   attendance?: ScheduleDocument['attendance'] | undefined;
-  gameOutcome?: ScheduleDocument['gameOutCome'];
+  gameOutcome?: 'pending' | 'win' | 'loss' | 'draw' | undefined;
   homeScore?: number | null;
   awayScore?: number | null;
   location: {
@@ -331,6 +340,7 @@ interface ScheduleOccurrence {
     state?: string;
     zip?: string;
   };
+  recurrence: ScheduleDocument['recurrence'];
 }
 
 export type SchedulePeriod = 'upcoming' | 'past';
@@ -350,10 +360,25 @@ const normalizeScheduleTypeFilter = (
     : undefined;
 };
 
-const toScheduleOccurrence = (
+const toPublicGameOutcome = (
+  outcome: ScheduleDocument['gameOutCome'],
+): ScheduleOccurrence['gameOutcome'] => {
+  if (outcome === 'tie') {
+    return 'draw';
+  }
+
+  if (outcome === 'cancelled') {
+    return undefined;
+  }
+
+  return outcome;
+};
+
+export const toScheduleOccurrence = (
   schedule: ScheduleDocument,
 ): ScheduleOccurrence => ({
   scheduleId: schedule._id.toString(),
+  recurrenceGroupId: schedule.recurrenceGroupId?.toString() ?? null,
   recurrenceDate: schedule.startDate,
   title: schedule.title ?? '',
   description: schedule.description,
@@ -370,10 +395,11 @@ const toScheduleOccurrence = (
   status: schedule.status ?? 'scheduled',
   cancellationReason: schedule.cancellationReason ?? null,
   attendance: schedule.attendance,
-  gameOutcome: schedule.gameOutCome,
+  gameOutcome: toPublicGameOutcome(schedule.gameOutCome),
   homeScore: schedule.scores?.homeTeamScore ?? null,
   awayScore: schedule.scores?.awayTeamScore ?? null,
   location: schedule.location,
+  recurrence: schedule.recurrence,
 });
 
 export const getTeamSchedule = async (
@@ -615,7 +641,8 @@ export const getNextGame = async (
 export interface TeamGameStats {
   wins: number;
   losses: number;
-  totalGames: number;
+  draws: number;
+  total: number;
   winRate: number;
 }
 
@@ -636,14 +663,18 @@ export const getTeamGameStats = async (
   const losses = schedules.filter(
     schedule => schedule.gameOutCome === 'loss',
   ).length;
+  const draws = schedules.filter(
+    schedule => schedule.gameOutCome === 'tie',
+  ).length;
 
-  const totalGames = schedules.length;
+  const total = schedules.length;
 
   return {
     wins,
     losses,
-    totalGames,
-    winRate: totalGames === 0 ? 0 : (wins / totalGames) * 100,
+    draws,
+    total,
+    winRate: total === 0 ? 0 : (wins / total) * 100,
   };
 };
 

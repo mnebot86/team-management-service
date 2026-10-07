@@ -59,6 +59,9 @@ export const createSchedule = async (
     eventType,
     opponentName,
     isHomeGame,
+    gameOutcome,
+    homeScore,
+    awayScore,
     startDate,
     startTime,
     endTime,
@@ -88,6 +91,9 @@ export const createSchedule = async (
       type: eventType,
       opponentName,
       isHomeGame,
+      gameOutcome,
+      homeScore,
+      awayScore,
       startDate,
       startTime,
       endTime,
@@ -108,7 +114,7 @@ export const createSchedule = async (
     return sendSuccess(
       res,
       StatusCodes.CREATED,
-      schedule,
+      scheduleService.toScheduleOccurrence(schedule),
       'Schedule event created successfully',
     );
   } catch (error) {
@@ -183,7 +189,7 @@ export const updateSchedule = async (
           zip: zipCode,
         },
         recurrence,
-        gameOutCome: gameOutcome,
+        gameOutCome: gameOutcome === 'draw' ? 'tie' : gameOutcome,
         scores: {
           homeTeamScore: homeScore,
           awayTeamScore: awayScore,
@@ -201,7 +207,7 @@ export const updateSchedule = async (
     return sendSuccess(
       res,
       StatusCodes.OK,
-      schedule,
+      scheduleService.toScheduleOccurrence(schedule),
       'Schedule event updated successfully',
     );
   } catch (error) {
@@ -257,7 +263,7 @@ export const cancelSchedule = async (
     return sendSuccess(
       res,
       StatusCodes.OK,
-      schedule,
+      scheduleService.toScheduleOccurrence(schedule),
       'Schedule event cancelled successfully',
     );
   } catch (error) {
@@ -616,7 +622,7 @@ export const updateAttendance = async (
     return sendSuccess(
       res,
       StatusCodes.OK,
-      schedule,
+      scheduleService.toScheduleOccurrence(schedule),
       'Attendance updated successfully',
     );
   } catch (error) {
@@ -665,4 +671,3 @@ export const getPlayerAttendance = async (
     );
   }
 };
-
