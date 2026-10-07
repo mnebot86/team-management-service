@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import {
   cancelSchedule,
+  createSchedule,
   getLastPractice,
   getNextPractice,
   getPlayerAttendance,
@@ -13,6 +14,7 @@ import { Schedule } from '../schedule.model';
 
 jest.mock('../schedule.model', () => ({
   Schedule: {
+    create: jest.fn(),
     find: jest.fn(),
     findById: jest.fn(),
     findByIdAndUpdate: jest.fn(),
@@ -61,6 +63,31 @@ describe('schedule service', () => {
 
     expect(sections.find((section) => section.title === 'Today')?.data).toHaveLength(1);
     expect(sections.find((section) => section.title === 'Upcoming')?.data ?? []).toHaveLength(0);
+  });
+
+  it('maps the public draw outcome to the stored tie value', async () => {
+    const createdSchedule = { _id: new Types.ObjectId() };
+    (Schedule.create as jest.Mock).mockResolvedValueOnce(createdSchedule);
+
+    await expect(createSchedule({
+      teamId: new Types.ObjectId(),
+      title: 'Drawn game',
+      type: 'game',
+      gameOutcome: 'draw',
+      homeScore: 14,
+      awayScore: 14,
+      startDate: new Date('2026-08-10T04:00:00.000Z'),
+      location: {},
+      createdByUserId: new Types.ObjectId(),
+    })).resolves.toBe(createdSchedule);
+
+    expect(Schedule.create).toHaveBeenCalledWith(expect.objectContaining({
+      gameOutCome: 'tie',
+      scores: {
+        homeTeamScore: 14,
+        awayTeamScore: 14,
+      },
+    }));
   });
 
   it('keeps events visible in Today after their start time has passed', async () => {
